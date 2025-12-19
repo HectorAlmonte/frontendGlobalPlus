@@ -1,32 +1,48 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+
+const PUBLIC_ROUTES = ["/", "/login", "/pricing", "/contacto"]
 
 export async function middleware(request: NextRequest) {
-  const cookie = request.headers.get("cookie") || "";
-  const path = request.nextUrl.pathname;
-  const isLogin = path === "/login";
+  const path = request.nextUrl.pathname
+  const cookie = request.headers.get("cookie") || ""
+  const hasToken = cookie.includes("token=")
+  const isPublic = PUBLIC_ROUTES.includes(path)
+  const isDashboard = path.startsWith("/dashboard")
 
-  // 🔵 Consultamos al backend si la cookie es válida
-  const res = await fetch("http://localhost:4000/api/auth/check", {
-    method: "GET",
-    headers: { Cookie: cookie },
-  });
-
-  const logged = res.ok; // true = cookie válida
-
-  // ⭐ Caso 1: Usuario LOGUEADO intenta entrar al LOGIN → redirigir a dashboard
-  if (logged && isLogin) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // 🔴 No hay token y quiere entrar al dashboard
+  if (!hasToken && isDashboard) {
+    return NextResponse.redirect(new URL("/login", request.url))
   }
 
-  // ⭐ Caso 2: Usuario NO logueado intentando entrar al DASHBOARD → redirigir a login
-  if (!logged && path.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // 🟡 Hay token → validamos con backend
+  if (hasToken) {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/check`,
+      {
+        headers: { Cookie: cookie },
+      }
+    )
+
+    const logged = res.ok
+
+    // Token inválido
+    if (!logged && isDashboard) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
+
+    // Ya logueado → no volver al login
+    if (logged && path === "/login") {
+      return NextResponse.redirect(new URL("/dashboard", request.url))
+    }
   }
 
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/login", "/dashboard/:path*"],
-};
+  matcher: [
+    "/dashboard/:path*",
+    "/login",
+  ],
+}
