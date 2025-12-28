@@ -47,7 +47,6 @@ export default function LandingPage() {
       <Stast/>
       <Services/>
       <Work/>
-      <Testimonials/>
       <Faq/>
       <Contact/>
       <Footer/>

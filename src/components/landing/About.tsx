@@ -18,22 +18,25 @@ const About = () => {
             </h2>
 
             <p className="mb-10 text-muted-foreground leading-relaxed">
-              Nuestro compromiso inquebrantable con la excelencia impulsa cada proyecto que emprendemos. 
-              Desde el concepto hasta la finalización, elaboramos meticulosamente soluciones que 
-              representan calidad, precisión e innovación.
+              Nuestro compromiso inquebrantable con la excelencia impulsa cada
+              proyecto que emprendemos. Desde el concepto hasta la finalización,
+              elaboramos meticulosamente soluciones que representan calidad,
+              precisión e innovación.
             </p>
 
             <ButtonHero text="Contáctanos" />
           </div>
 
-          {/* IMAGE */}
+          {/* IMAGE (MISMA IMAGEN, MEJOR TRATADA) */}
           <div className="w-full xl:w-[460px] flex justify-center xl:justify-end">
-            <div className="relative w-full h-[420px] rounded-xl overflow-hidden">
+            <div className="relative w-full h-[420px] rounded-2xl bg-primary flex items-center justify-center shadow-lg">
               <Image
-                src="/logo/Logo-fondo-azul.png"
-                alt="Logo"
-                fill
-                className="object-cover"
+                src="/logo/logo-texto.png"
+                alt="GlobalPlus Logística Integral"
+                width={320}
+                height={140}
+                className="object-contain"
+                priority
               />
             </div>
           </div>

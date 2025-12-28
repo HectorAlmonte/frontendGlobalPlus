@@ -33,6 +33,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-custom: var(--custom);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -53,6 +54,7 @@
    --popover-foreground:  oklch(0.141 0.005 285.823);
    --primary:  oklch(0.488 0.243 264.376);
    --primary-foreground:  oklch(0.97 0.014 254.604);
+   --custom: oklch(0.491 0.077 263.85);
    --secondary:  oklch(0.967 0.001 286.375);
    --secondary-foreground:  oklch(0.21 0.006 285.885);
    --muted:  oklch(0.967 0.001 286.375);
@@ -118,5 +120,20 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* TITULOS CORPORATIVOS */
+  .h1 {
+    @apply font-bold tracking-tight text-4xl sm:text-5xl xl:text-6xl leading-tight;
+  }
+
+  .h2 {
+    @apply font-semibold tracking-tight text-3xl sm:text-4xl xl:text-5xl leading-snug;
+  }
+
+  .h3 {
+    @apply font-semibold tracking-tight text-xl sm:text-2xl xl:text-3xl leading-snug;
   }
 }
