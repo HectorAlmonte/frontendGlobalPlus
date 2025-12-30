@@ -21,18 +21,12 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconCircleCheckFilled,
   IconDotsVertical,
   IconGripVertical,
-  IconLayoutColumns,
-  IconLoader,
-  IconPlus,
-  IconTrendingUp,
 } from "@tabler/icons-react"
 import {
   ColumnDef,
@@ -49,33 +43,13 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
-import { toast } from "sonner"
 import { z } from "zod"
 
-import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
-import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -90,7 +64,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -99,14 +72,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tabs,
-  TabsContent,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { CreateOrderButton } from "@/app/dashboard/ordenes/createOrderButton"
+import type { RowSelectionState } from "@tanstack/react-table"
+
 
 /* =========================
-   SCHEMA (camiones)
+   1) Schema / Types
 ========================= */
 export const schema = z.object({
   id: z.number(),
@@ -124,7 +96,7 @@ export const schema = z.object({
 type Camion = z.infer<typeof schema>
 
 /* =========================
-   DATA DE PRUEBA (tu Excel)
+   2) Data (mock)
 ========================= */
 export const camionesData: Camion[] = [
   {
@@ -178,8 +150,10 @@ export const camionesData: Camion[] = [
 ]
 
 /* =========================
-   Drag handle (mismo estilo)
+   3) Small UI helpers
 ========================= */
+
+/** Drag handle (con stopPropagation para no activar click de fila) */
 function DragHandle({ id }: { id: number }) {
   const { attributes, listeners } = useSortable({ id })
 
@@ -190,6 +164,8 @@ function DragHandle({ id }: { id: number }) {
       variant="ghost"
       size="icon"
       className="text-muted-foreground size-7 hover:bg-transparent"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       <IconGripVertical className="text-muted-foreground size-3" />
       <span className="sr-only">Drag to reorder</span>
@@ -198,14 +174,17 @@ function DragHandle({ id }: { id: number }) {
 }
 
 /* =========================
-   COLUMNAS adaptadas (mismas UI y Drawer trigger)
+   4) Columns (FIX select-all + stopPropagation)
 ========================= */
 const columns: ColumnDef<Camion>[] = [
+  // Drag column
   {
     id: "drag",
     header: () => null,
     cell: ({ row }) => <DragHandle id={row.original.id} />,
   },
+
+  // Checkbox selection column
   {
     id: "select",
     header: ({ table }) => (
@@ -217,6 +196,8 @@ const columns: ColumnDef<Camion>[] = [
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </div>
     ),
@@ -226,12 +207,17 @@ const columns: ColumnDef<Camion>[] = [
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </div>
     ),
     enableSorting: false,
     enableHiding: false,
   },
+
+
+  // Data columns
   {
     accessorKey: "turno",
     header: "Turno",
@@ -242,19 +228,11 @@ const columns: ColumnDef<Camion>[] = [
     accessorKey: "tracto",
     header: "Placa Tracto",
     cell: ({ row }) => (
-      <Button variant="link" className="p-0 text-left" asChild>
-        <DrawerTriggerMock item={row.original} />
-      </Button>
+      <div className="text-foreground">{row.original.tracto}</div>
     ),
   },
-  {
-    accessorKey: "carreta",
-    header: "Placa Carreta",
-  },
-  {
-    accessorKey: "ticket",
-    header: "N° Ticket",
-  },
+  { accessorKey: "carreta", header: "Placa Carreta" },
+  { accessorKey: "ticket", header: "N° Ticket" },
   {
     accessorKey: "peso",
     header: "Peso Neto (KG)",
@@ -264,28 +242,22 @@ const columns: ColumnDef<Camion>[] = [
       </Badge>
     ),
   },
-  {
-    accessorKey: "destino",
-    header: "Destino",
-  },
+  { accessorKey: "destino", header: "Destino" },
   {
     accessorKey: "ingreso",
     header: "Hora Ingreso",
     cell: ({ row }) => (
       <div className="text-sm">
-        {/* <div>{row.original.destino}</div> */}
-        <div className="text-muted-foreground text-xs">{row.original.ingreso}</div>
+        <div className="text-muted-foreground text-xs">
+          {row.original.ingreso}
+        </div>
       </div>
     ),
   },
-  {
-    accessorKey: "salida",
-    header: "Hora Salida",
-  },
-  {
-    accessorKey: "duracion",
-    header: "Duración",
-  },
+  { accessorKey: "salida", header: "Hora Salida" },
+  { accessorKey: "duracion", header: "Duración" },
+
+  // Actions column (stopPropagation para no disparar click de fila)
   {
     id: "actions",
     cell: () => (
@@ -295,6 +267,8 @@ const columns: ColumnDef<Camion>[] = [
             variant="ghost"
             className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
             size="icon"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <IconDotsVertical />
             <span className="sr-only">Open menu</span>
@@ -311,17 +285,16 @@ const columns: ColumnDef<Camion>[] = [
   },
 ]
 
-/* Helper Drawer trigger used inside cell (keeps same Drawer used below) */
-function DrawerTriggerMock({ item }: { item: Camion }) {
-  // This component just renders the text and will be wrapped by DrawerTrigger in TableCellViewer,
-  // we keep it minimal to match the original behavior.
-  return <span className="text-foreground">{item.tracto}</span>
-}
-
 /* =========================
-   Draggable row (keeps original attributes + data-attrs)
+   5) Draggable Row (mantiene estética / click de fila)
 ========================= */
-function DraggableRow({ row, onOpen }: { row: Row<Camion>; onOpen: (d: Camion) => void }) {
+function DraggableRow({
+  row,
+  onOpen,
+}: {
+  row: Row<Camion>
+  onOpen: (d: Camion) => void
+}) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   })
@@ -348,121 +321,37 @@ function DraggableRow({ row, onOpen }: { row: Row<Camion>; onOpen: (d: Camion) =
 }
 
 /* =========================
-   TableCellViewer -> Drawer content (adaptado al camión)
-   Usamos el mismo Drawer UI que tenías en el original
+   6) Main Component
 ========================= */
-function TableCellViewer({ item }: { item: Camion }) {
-  const isMobile = useIsMobile()
-
-  return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">
-          {item.tracto}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>{`Detalle - ${item.tracto}`}</DrawerTitle>
-          <DrawerDescription>Información del registro de pesaje</DrawerDescription>
-        </DrawerHeader>
-
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          {/* small chart area preserved (kept from original) */}
-          {!isMobile && (
-            <>
-              <ChartContainer
-                config={{
-                  desktop: { label: "Pesos", color: "var(--primary)" },
-                  mobile: { label: "Entradas", color: "var(--muted)" },
-                }}
-              >
-                <AreaChart
-                  data={[
-                    { month: "01", desktop: 100, mobile: 50 },
-                    { month: "02", desktop: 120, mobile: 70 },
-                  ]}
-                  margin={{ left: 0, right: 10 }}
-                >
-                  <CartesianGrid vertical={false} />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                </AreaChart>
-              </ChartContainer>
-              <Separator />
-            </>
-          )}
-
-          <form className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label>Turno</Label>
-              <Input defaultValue={item.turno} readOnly />
-            </div>
-            <div className="grid gap-2">
-              <Label>Placa Tracto</Label>
-              <Input defaultValue={item.tracto} readOnly />
-            </div>
-            <div className="grid gap-2">
-              <Label>Placa Carreta</Label>
-              <Input defaultValue={item.carreta} readOnly />
-            </div>
-            <div className="grid gap-2">
-              <Label>N° Ticket</Label>
-              <Input defaultValue={item.ticket} readOnly />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Peso Neto</Label>
-                <Input defaultValue={item.peso} readOnly />
-              </div>
-              <div>
-                <Label>Destino</Label>
-                <Input defaultValue={item.destino} readOnly />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Hora Ingreso</Label>
-                <Input defaultValue={item.ingreso} readOnly />
-              </div>
-              <div>
-                <Label>Hora Salida</Label>
-                <Input defaultValue={item.salida} readOnly />
-              </div>
-            </div>
-            <div>
-              <Label>Duración</Label>
-              <Input defaultValue={item.duracion} readOnly />
-            </div>
-          </form>
-        </div>
-
-        <DrawerFooter>
-          <Button>Editar</Button>
-          <DrawerClose asChild>
-            <Button variant="outline">Cerrar</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  )
-}
-
-/* =========================
-   COMPONENTE PRINCIPAL (mantiene tu layout original)
-========================= */
-export function DataTable({ data: initialData = camionesData }: { data?: Camion[] }) {
+export function DataTable({
+  data: initialData = camionesData,
+}: {
+  data?: Camion[]
+}) {
+  // -------------------------
+  // State
+  // -------------------------
   const [data, setData] = React.useState<Camion[]>(() => initialData)
-  const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] =
+    React.useState<ColumnFiltersState>([])
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  })
   const [forceUpdate, setForceUpdate] = React.useState(0)
 
-  // drawer states
+  // (Se mantiene tu intención de abrir drawer por fila, aunque aquí solo dejamos el callback)
   const [openDrawer, setOpenDrawer] = React.useState(false)
   const [selectedRow, setSelectedRow] = React.useState<Camion | null>(null)
 
+  // -------------------------
+  // DnD setup
+  // -------------------------
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -470,8 +359,14 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
     useSensor(KeyboardSensor, {})
   )
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(() => data?.map(({ id }) => id) || [], [data])
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () => data?.map(({ id }) => id) || [],
+    [data]
+  )
 
+  // -------------------------
+  // Table setup
+  // -------------------------
   const table = useReactTable({
     data,
     columns,
@@ -484,16 +379,21 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
     },
     getRowId: (row) => row.id.toString(),
     enableRowSelection: true,
+
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    // preserve your custom visibility updater and forceUpdate trick
+
+    // Mantienes tu “forceUpdate trick” para evitar glitches visuales al cambiar visibilidad
     onColumnVisibilityChange: (updater) => {
-      const newVisibility = typeof updater === "function" ? updater(columnVisibility) : updater
+      const newVisibility =
+        typeof updater === "function" ? updater(columnVisibility) : updater
       setColumnVisibility(newVisibility)
-      setTimeout(() => setForceUpdate(prev => prev + 1), 0)
+      setTimeout(() => setForceUpdate((prev) => prev + 1), 0)
     },
+
     onPaginationChange: setPagination,
+
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -502,6 +402,9 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
+  // -------------------------
+  // Handlers
+  // -------------------------
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (active && over && active.id !== over.id) {
@@ -513,55 +416,39 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
     }
   }
 
+  // -------------------------
+  // Render
+  // -------------------------
   return (
     <Tabs defaultValue="outline" className="w-full flex-col justify-start gap-6">
+      {/* Toolbar (filtro + botón crear) */}
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">View</Label>
+        <Label htmlFor="view-selector" className="sr-only">
+          View
+        </Label>
+
         <Input
           placeholder="Filtrar por camiones..."
           value={(table.getColumn("tracto")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("tracto")?.setFilterValue(event.target.value)}
+          onChange={(event) =>
+            table.getColumn("tracto")?.setFilterValue(event.target.value)
+          }
           id="view-selector"
           className="max-w-sm"
         />
-        <CreateOrderButton onCreate={(order) => {
-          setData((prev) => [
-            { ...order, id: Date.now() },
-            ...prev,
-          ])
-        }} />
-        {/* <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <IconLayoutColumns />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
-                <IconChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div> */}
+
+        <CreateOrderButton
+          onCreate={(order) => {
+            setData((prev) => [{ ...order, id: Date.now() }, ...prev])
+          }}
+        />
       </div>
 
-      <TabsContent value="outline" className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6">
+      {/* Table */}
+      <TabsContent
+        value="outline"
+        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+      >
         <div className="overflow-hidden rounded-lg border">
           <DndContext
             collisionDetection={closestCenter}
@@ -576,21 +463,33 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
                       <TableHead key={header.id} colSpan={header.colSpan}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                       </TableHead>
                     ))}
                   </TableRow>
                 ))}
               </TableHeader>
 
-              <TableBody key={forceUpdate} className="**:data-[slot=table-cell]:first:w-8">
+              <TableBody
+                key={forceUpdate}
+                className="**:data-[slot=table-cell]:first:w-8"
+              >
                 {table.getRowModel().rows?.length ? (
-                  <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
+                  <SortableContext
+                    items={dataIds}
+                    strategy={verticalListSortingStrategy}
+                  >
                     {table.getRowModel().rows.map((row) => (
                       <DraggableRow
                         key={row.id}
                         row={row}
                         onOpen={(d) => {
+                          // Mantienes tu flujo para abrir drawer (si lo conectas luego)
                           setSelectedRow(d)
                           setOpenDrawer(true)
                         }}
@@ -599,7 +498,9 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
                   </SortableContext>
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">No results.</TableCell>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      No results.
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -607,47 +508,82 @@ export function DataTable({ data: initialData = camionesData }: { data?: Camion[
           </DndContext>
         </div>
 
+        {/* Pagination */}
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
 
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">Rows per page</Label>
+              <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                Rows per page
+              </Label>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => table.setPageSize(Number(value))}
               >
                 <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue placeholder={table.getState().pagination.pageSize} />
+                  <SelectValue
+                    placeholder={table.getState().pagination.pageSize}
+                  />
                 </SelectTrigger>
                 <SelectContent side="top">
                   {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
             </div>
 
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
                 <span className="sr-only">Go to first page</span>
                 <IconChevronsLeft />
               </Button>
-              <Button variant="outline" className="size-8" size="icon" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+
+              <Button
+                variant="outline"
+                className="size-8"
+                size="icon"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
                 <span className="sr-only">Go to previous page</span>
                 <IconChevronLeft />
               </Button>
-              <Button variant="outline" className="size-8" size="icon" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+
+              <Button
+                variant="outline"
+                className="size-8"
+                size="icon"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
                 <span className="sr-only">Go to next page</span>
                 <IconChevronRight />
               </Button>
-              <Button variant="outline" className="hidden size-8 lg:flex" size="icon" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
+
+              <Button
+                variant="outline"
+                className="hidden size-8 lg:flex"
+                size="icon"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
                 <span className="sr-only">Go to last page</span>
                 <IconChevronsRight />
               </Button>

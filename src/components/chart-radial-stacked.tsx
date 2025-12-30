@@ -4,6 +4,7 @@ import ChartRadialIndividual from "./ui/ChartRadialIndividual"
 import { useEffect, useRef, useState } from "react"
 import { io, Socket } from "socket.io-client"
 import { PatioItem } from "@/types/patio"
+import { toast } from "sonner"
 
 export const description = "A radial chart with stacked sections"
 
@@ -15,61 +16,51 @@ export function ChartRadialStacked() {
 
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL
+    if (!API_URL) return
 
-    if (!API_URL) {
-      console.error("❌ NEXT_PUBLIC_API_URL no está definido")
-      setLoading(false)
-      return
-    }
-
-    // 1) ✅ FETCH SIEMPRE (no depende del socket)
-    ;(async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/patios`, {
-          method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        })
-        const json = await res.json()
-        setData(json.data ?? json)
-      } catch (err) {
-        console.error("❌ Error cargando patios:", err)
-      } finally {
-        setLoading(false)
-      }
-    })()
-
-    // 2) ✅ SOCKET SOLO PARA ESCUCHAR
     const s = io(API_URL, {
       transports: ["websocket"],
       withCredentials: true,
     })
     socketRef.current = s
 
-    const onConnect = () => console.log("✅ Socket conectado:", s.id)
+    const fetchPatios = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/patios`, {
+          credentials: "include",
+        })
+        const json = await res.json()
+        setData(json.data ?? json)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const onConnect = () => {
+      console.log("✅ Socket conectado:", s.id)
+      fetchPatios() // 👈 ahora sí: el emit te va a caer
+    }
+
     const onThreshold = (payload: any) =>
-      console.log("📩 EVENTO RECIBIDO warehouse:threshold:", payload)
-    const onConnectError = (err: any) =>
-      console.error("❌ socket connect_error:", err?.message ?? err)
+      toast.warning("🚨 Capacidad crítica", {
+        description: `Patio ${payload.patio} al ${payload.porcentaje}%`,
+      })
 
     s.on("connect", onConnect)
     s.on("warehouse:threshold", onThreshold)
-    s.on("connect_error", onConnectError)
-
-    // 🔍 debug brutal: imprime TODO lo que llegue por socket
-    s.onAny((event, payload) => {
-      console.log("📡 onAny:", event, payload)
-    })
+    s.on("connect_error", (err) =>
+      console.error("❌ connect_error:", err?.message ?? err)
+    )
 
     return () => {
       s.off("connect", onConnect)
       s.off("warehouse:threshold", onThreshold)
-      s.off("connect_error", onConnectError)
-      s.offAny()
       s.disconnect()
-      socketRef.current = null
     }
   }, [])
+
 
   if (loading) return <p className="p-4 text-muted-foreground">Cargando patios...</p>
 
