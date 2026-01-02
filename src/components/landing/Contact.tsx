@@ -21,7 +21,7 @@ const Contact = () => {
           transition={{ duration: 0.55, ease: 'easeOut' }}
           className="text-center max-w-2xl mx-auto"
         >
-          <Pretitle text="Contact" center />
+          <Pretitle text="Contacto" center />
           <h2 className="text-3xl sm:text-4xl font-semibold mt-4 mb-4 text-slate-900">
             ¿Listo para comenzar?
           </h2>
@@ -53,7 +53,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Teléfono</p>
-                  <p className="text-slate-900 font-medium">+51 999 999 999</p>
+                  <p className="text-slate-900 font-medium">+51 915 149 329</p>
                 </div>
               </div>
 
@@ -63,7 +63,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Correo</p>
-                  <p className="text-slate-900 font-medium">contacto@tuempresa.com</p>
+                  <p className="text-slate-900 font-medium">ventas@globalpluscorporation.com</p>
                 </div>
               </div>
 
@@ -73,7 +73,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Ubicación</p>
-                  <p className="text-slate-900 font-medium">Lima, Perú</p>
+                  <p className="text-slate-900 font-medium">Perú</p>
                 </div>
               </div>
             </div>

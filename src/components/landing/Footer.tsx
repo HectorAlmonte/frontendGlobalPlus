@@ -47,7 +47,7 @@ const Footer = () => {
               calidad, seguridad y cumplimiento.
             </p>
 
-            <div className="mt-5 flex items-center gap-3">
+            {/* <div className="mt-5 flex items-center gap-3">
               <a className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 transition flex items-center justify-center">
                 <PiInstagramLogoFill className="text-xl" />
               </a>
@@ -57,7 +57,7 @@ const Footer = () => {
               <a className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 transition flex items-center justify-center">
                 <PiLinkedinLogoFill className="text-xl" />
               </a>
-            </div>
+            </div> */}
           </div>
 
           {/* Links */}
@@ -67,11 +67,11 @@ const Footer = () => {
               <p className="text-sm font-semibold text-white/90">Secciones</p>
               <ul className="mt-4 space-y-3 text-white/70">
                 {[
-                  { name: 'Home', path: 'home' },
-                  { name: 'Services', path: 'services' },
-                  { name: 'Work', path: 'work' },
-                  { name: 'FAQ', path: 'faq' },
-                  { name: 'Contact', path: 'contact' },
+                  { name: 'Inicio', path: 'home' },
+                  { name: 'Nosotros', path: 'about' },
+                  { name: 'Servicios', path: 'services' },
+                  //{ name: 'mision', path: 'mision' },
+                  { name: 'Contacto', path: 'contact' },
                 ].map((link, i) => (
                   <li key={i}>
                     <ScrollLink
@@ -101,9 +101,9 @@ const Footer = () => {
             <div>
               <p className="text-sm font-semibold text-white/90">Contacto</p>
               <ul className="mt-4 space-y-3 text-white/70">
-                <li>Lima, Perú</li>
-                <li>+51 999 999 999</li>
-                <li>contacto@tuempresa.com</li>
+                <li>Perú</li>
+                <li>+51 915 149 329</li>
+                <li>ventas@globalpluscorporation.com</li>
               </ul>
             </div>
           </div>

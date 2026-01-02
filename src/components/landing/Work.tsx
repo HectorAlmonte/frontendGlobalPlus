@@ -67,7 +67,7 @@ const Work = () => {
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="text-center max-w-2xl mx-auto"
         >
-          <Pretitle text="Work process" center />
+          <Pretitle text="Proceso de trabajo" center />
           <h2 className="h2 mt-4 mb-4">Así trabajamos contigo</h2>
           <p className="text-muted-foreground leading-relaxed">
             Un flujo simple y claro para lograr resultados consistentes: desde la
