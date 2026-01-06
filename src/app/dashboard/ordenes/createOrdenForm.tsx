@@ -18,8 +18,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Orden } from "@/types/orden"
 
-
-
 const CreateOrderSchema = z.object({
   turno: z.string().min(1, "Turno requerido"),
   tracto: z.string().min(1, "Placa de tracto requerida"),
@@ -29,13 +27,15 @@ const CreateOrderSchema = z.object({
   destino: z.string().min(1, "Destino requerido"),
   ingreso: z.string().min(1, "Hora de ingreso requerida"),
   salida: z.string().optional(),
+  duracion: z.string().optional(), // ✅ FIX
 }).refine((data) => {
-  if (!data.salida) return true; // salida opcional
-  return data.salida >= data.ingreso;
+  if (!data.salida) return true // salida opcional
+  return data.salida >= data.ingreso
 }, {
   message: "La hora de salida no puede ser menor que la de ingreso",
   path: ["salida"],
-});
+})
+
 type CreateOrderValues = z.infer<typeof CreateOrderSchema>
 
 export function CreateOrderForm({
@@ -56,24 +56,29 @@ export function CreateOrderForm({
       destino: "",
       ingreso: "",
       salida: "",
+      duracion: "",
     },
   })
 
   const handleSubmit = form.handleSubmit((values) => {
-    let duracion = "";
-    if (values.ingreso && values.salida) {
-      const [h1, m1] = values.ingreso.split(":").map(Number);
-      const [h2, m2] = values.salida.split(":").map(Number);
+    let duracion = ""
 
-      let minutesDiff = (h2 * 60 + m2) - (h1 * 60 + m1);
-      if (minutesDiff < 0) minutesDiff = 0; // seguridad
-      const hours = Math.floor(minutesDiff / 60);
-      const minutes = minutesDiff % 60;
-      duracion = `${hours}h ${minutes}m`;
+    if (values.ingreso && values.salida) {
+      const [h1, m1] = values.ingreso.split(":").map(Number)
+      const [h2, m2] = values.salida.split(":").map(Number)
+
+      let minutesDiff = (h2 * 60 + m2) - (h1 * 60 + m1)
+      if (minutesDiff < 0) minutesDiff = 0 // seguridad
+      const hours = Math.floor(minutesDiff / 60)
+      const minutes = minutesDiff % 60
+      duracion = `${hours}h ${minutes}m`
     }
 
-    onSubmit({ ...values, duracion });
-    form.reset();
+    // ✅ mantener el objeto dentro del tipo del schema
+    const payload: CreateOrderValues = { ...values, duracion }
+
+    onSubmit(payload as Omit<Orden, "id">)
+    form.reset()
   })
 
   const destinos = ["J1", "J2", "J3", "J4", "J5", "J6", "J7"]
@@ -81,10 +86,7 @@ export function CreateOrderForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={handleSubmit}
-        className={cn("grid gap-4", className)}
-      >
+      <form onSubmit={handleSubmit} className={cn("grid gap-4", className)}>
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -117,7 +119,11 @@ export function CreateOrderForm({
               <FormItem>
                 <FormLabel>Placa Tracto</FormLabel>
                 <FormControl>
-                  <Input placeholder="Placa Tracto" {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase())}/>
+                  <Input
+                    placeholder="Placa Tracto"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -131,7 +137,11 @@ export function CreateOrderForm({
               <FormItem>
                 <FormLabel>Placa Carreta</FormLabel>
                 <FormControl>
-                  <Input placeholder="Placa Carreta" {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase()) }/>
+                  <Input
+                    placeholder="Placa Carreta"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -145,7 +155,11 @@ export function CreateOrderForm({
               <FormItem>
                 <FormLabel>N° Ticket (opcional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ticket" {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase())}/>
+                  <Input
+                    placeholder="Ticket"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -159,7 +173,11 @@ export function CreateOrderForm({
               <FormItem>
                 <FormLabel>Peso Neto</FormLabel>
                 <FormControl>
-                  <Input placeholder="Peso Neto" {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
+                  <Input
+                    placeholder="Peso Neto"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
