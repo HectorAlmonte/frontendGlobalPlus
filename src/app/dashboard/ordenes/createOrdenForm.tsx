@@ -16,8 +16,9 @@ import {
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { Orden } from "@/types/orden"
 
-import type { Orden } from "../types/orden"
+
 
 const CreateOrderSchema = z.object({
   turno: z.string().min(1, "Turno requerido"),
