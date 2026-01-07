@@ -7,12 +7,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type Variants } from "framer-motion"
 
 export default function FAQ() {
   const [openItem, setOpenItem] = useState<string | undefined>(undefined)
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 14 },
     show: {
       opacity: 1,
@@ -21,10 +21,19 @@ export default function FAQ() {
     },
   }
 
-  const contentMotion = {
+  const contentMotion: {
+    initial: Variants[string]
+    animate: Variants[string]
+    exit: Variants[string]
+  } = {
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
     exit: { opacity: 0, y: 6, transition: { duration: 0.18, ease: "easeIn" } },
+  }
+
+  const handleValueChange = (value: string) => {
+    // Radix/shadcn puede devolver "" cuando collapsible está activo
+    setOpenItem(value || undefined)
   }
 
   return (
@@ -67,10 +76,9 @@ export default function FAQ() {
             type="single"
             collapsible
             value={openItem}
-            onValueChange={setOpenItem}
+            onValueChange={handleValueChange}
             className="space-y-6"
           >
-            {/* ITEM helper */}
             {[
               {
                 value: "item-1",
@@ -127,13 +135,14 @@ export default function FAQ() {
                     {item.q}
                   </AccordionTrigger>
 
-                  {/* Radix maneja la animación de altura; nosotros animamos el contenido dentro */}
                   <AccordionContent className="pb-6 text-base sm:text-lg leading-relaxed text-muted-foreground">
                     <AnimatePresence initial={false}>
                       {openItem === item.value && (
                         <motion.div
                           key={`${item.value}-content`}
-                          {...contentMotion}
+                          initial={contentMotion.initial as any}
+                          animate={contentMotion.animate as any}
+                          exit={contentMotion.exit as any}
                         >
                           {item.a}
                         </motion.div>

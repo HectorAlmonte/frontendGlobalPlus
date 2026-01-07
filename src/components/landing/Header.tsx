@@ -66,7 +66,7 @@ const Header = () => {
                            border border-white/30
                            shadow-sm
                            transition-all duration-200
-                           hover:-translate-y-[1px] hover:shadow-md"
+                           hover:-translate-y-px hover:shadow-md"
               >
                 <span className="flex-1 text-center tracking-[1.2px] font-primary font-extrabold text-[13px] uppercase">
                   Sistema

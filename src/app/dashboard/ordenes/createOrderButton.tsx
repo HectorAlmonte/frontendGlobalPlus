@@ -4,7 +4,6 @@ import * as React from "react"
 import { IconPlus } from "@tabler/icons-react"
 
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 
@@ -28,9 +27,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 
-import { Input } from "@/components/ui/input"
-
-import type Orden  from "../types/orden"
+import type { Orden } from "@/types/orden"
 import { CreateOrderForm } from "./createOrdenForm"
 
 export function CreateOrderButton({

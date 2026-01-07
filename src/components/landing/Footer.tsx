@@ -3,18 +3,19 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Link as ScrollLink } from 'react-scroll'
-import {
-  PiInstagramLogoFill,
-  PiFacebookLogoFill,
-  PiLinkedinLogoFill,
-} from 'react-icons/pi'
 import Image from 'next/image'
 
+type ScrollLinkCommonProps = {
+  smooth: boolean
+  spy: boolean
+  duration: number
+  offset: number
+}
 
 const Footer = () => {
   const year = new Date().getFullYear()
 
-  const scrollProps = {
+  const scrollProps: ScrollLinkCommonProps = {
     smooth: true,
     spy: true,
     duration: 600,
@@ -76,7 +77,10 @@ const Footer = () => {
                   <li key={i}>
                     <ScrollLink
                       to={link.path}
-                      {...scrollProps}
+                      smooth={scrollProps.smooth}
+                      spy={scrollProps.spy}
+                      duration={scrollProps.duration}
+                      offset={scrollProps.offset}
                       className="cursor-pointer hover:text-white transition-colors"
                     >
                       {link.name}
