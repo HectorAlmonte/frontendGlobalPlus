@@ -35,7 +35,7 @@ export default function LandingPage() {
   
 
   return (
-    <div>
+    <div className="light dark:light">
       <div className="relative z-10">
         <Header/>
       </div>
