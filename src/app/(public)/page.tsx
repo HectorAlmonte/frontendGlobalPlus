@@ -1,55 +1,66 @@
-'use client'
+"use client";
 
-import { useState,useEffect } from "react"
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 
-import About from "@/components/landing/About"
-import Contact from "@/components/landing/Contact"
-import Faq from "@/components/landing/Faq"
-import Footer from "@/components/landing/Footer"
-import Header from "@/components/landing/Header"
-import Hero from "@/components/landing/Hero"
-import Services from "@/components/landing/Services"
-import Stast from "@/components/landing/Stast"
-import Testimonials from "@/components/landing/Testimonials"
-import Topbar from "@/components/landing/Topbar"
-import Work from "@/components/landing/Work"
-
-
-import Link from "next/link"
+import About from "@/components/landing/About";
+import Contact from "@/components/landing/Contact";
+import Faq from "@/components/landing/Faq";
+import Footer from "@/components/landing/Footer";
+import Header from "@/components/landing/Header";
+import Hero from "@/components/landing/Hero";
+import Services from "@/components/landing/Services";
+import Stast from "@/components/landing/Stast";
+import Work from "@/components/landing/Work";
 
 export default function LandingPage() {
+  const [headerActive, setHeaderActive] = useState(false);
 
-  const [headerActive, setHeaderActive] = useState(false)
+  const { theme, resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
-    
-    const handleScroll = () =>{
-      setHeaderActive(window.scrollY > 200);
-    }
+    const handleScroll = () => setHeaderActive(window.scrollY > 200);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-    window.addEventListener('scroll', handleScroll)
+  // ✅ Forzar light en landing, y restaurar el tema anterior al salir
+  useEffect(() => {
+    // resolvedTheme te da el real ("light" o "dark") aunque theme sea "system"
+    const prev = theme ?? resolvedTheme ?? "system";
+
+    setTheme("light");
+
     return () => {
-     window.removeEventListener('scroll',handleScroll) 
-    }
-  }, [])
-  
+      // vuelve al tema anterior al salir de la landing
+      setTheme(prev);
+    };
+    // OJO: no metas `resolvedTheme` en deps para evitar efectos raros
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setTheme]);
 
   return (
-    <div className="light dark:light">
+    <div>
       <div className="relative z-10">
-        <Header/>
+        <Header />
       </div>
-      <div className={`w-full transition-transform duration-500 fixed top-0 left-0 z-50 ${headerActive ? "translate-y-0" : "-translate-y-full"}`}>
-        <Header/>
+
+      <div
+        className={`w-full transition-transform duration-500 fixed top-0 left-0 z-50 ${
+          headerActive ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <Header />
       </div>
-      <Hero/>
-      <About/>
-      <Stast/>
-      <Services/>
-      <Work/>
-      <Faq/>
-      <Contact/>
-      <Footer/>
+
+      <Hero />
+      <About />
+      <Stast />
+      <Services />
+      <Work />
+      <Faq />
+      <Contact />
+      <Footer />
     </div>
-  )
+  );
 }
