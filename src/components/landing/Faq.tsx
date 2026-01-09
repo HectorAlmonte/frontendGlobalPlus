@@ -107,7 +107,7 @@ export default function FAQ() {
                     px-5 sm:px-6
                     shadow-sm
                     transition-all duration-200
-                    hover:shadow-md hover:-translate-y-[1px]
+                    hover:shadow-md hover:-translate-y-px
                     ${openItem === item.value ? "ring-1 ring-primary/20" : ""}
                   `}
                 >

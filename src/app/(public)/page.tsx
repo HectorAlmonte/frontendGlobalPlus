@@ -53,14 +53,14 @@ export default function LandingPage() {
         <Header />
       </div>
 
-      <Hero />
-      <About />
-      <Stast />
-      <Services />
-      <Work />
-      <Faq />
-      <Contact />
-      <Footer />
+        <Hero />
+        <About />
+        <Stast />
+        <Services />
+        <Work />
+        <Faq />
+        <Contact />
+        <Footer />
     </div>
   );
 }

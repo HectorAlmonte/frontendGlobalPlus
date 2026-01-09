@@ -80,15 +80,14 @@ const Work = () => {
               relative w-full
               h-80 sm:h-[380px] xl:h-[520px]
               rounded-3xl overflow-hidden
-              shadow-[0_18px_60px_rgba(0,0,0,0.18)]
+              shadow-2x1
               bg-primary
             "
           >
             {/* profundidad + ring */}
             <div className="pointer-events-none absolute inset-0 ring-1 ring-white/10" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_55%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(0,0,0,0.22),transparent_60%)]" />
-
+            <div className="pointer-events-none absolute inset-0 work-radial-1" />
+            <div className="pointer-events-none absolute inset-0 work-radial-2" />
             <Image
               src="/images/work/workimg.png"
               alt="Proceso de trabajo"

@@ -34,8 +34,8 @@ const Footer = () => {
     <footer className="relative text-white">
       {/* fondo premium */}
       <div className="absolute inset-0 bg-slate-950" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(59,130,246,0.18),transparent_40%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.06),transparent_45%)]" />
+        <div className="absolute inset-0 footer-bg-1" />
+        <div className="absolute inset-0 footer-bg-2" />
       <div className="absolute inset-x-0 top-0 h-px bg-white/10" />
 
       <div className="relative">
@@ -92,17 +92,18 @@ const Footer = () => {
                 <ul className="mt-4 space-y-3 text-white/70">
                   {sections.map((link) => (
                     <li key={link.path}>
-                      <ScrollLink
-                        to={link.path}
-                        smooth={scrollProps.smooth}
-                        spy={scrollProps.spy}
-                        duration={scrollProps.duration}
-                        offset={scrollProps.offset}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          document
+                            .getElementById(link.path)
+                            ?.scrollIntoView({ behavior: "smooth" })
+                        }
                         className="cursor-pointer inline-flex items-center gap-2 hover:text-white transition-colors"
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                         {link.name}
-                      </ScrollLink>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -136,25 +137,19 @@ const Footer = () => {
 
                 {/* volver arriba */}
                 <div className="mt-6">
-                  <ScrollLink
-                    to="home"
-                    smooth={scrollProps.smooth}
-                    spy={scrollProps.spy}
-                    duration={scrollProps.duration}
-                    offset={scrollProps.offset}
-                    className="
-                      group cursor-pointer
-                      inline-flex items-center gap-2
-                      rounded-full
-                      bg-white/10 border border-white/15
-                      px-4 py-2
-                      text-sm font-semibold text-white/90
-                      hover:bg-white/15 transition-all
-                    "
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document
+                        .getElementById("home")
+                        ?.scrollIntoView({ behavior: "smooth" })
+                    }
+                    className="group cursor-pointer inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm font-semibold text-white/90 hover:bg-white/15 transition-all"
                   >
                     Volver arriba
-                    <RiArrowUpLine className="text-lg transition-transform duration-200 group-hover:-translate-y-[2px]" />
-                  </ScrollLink>
+                    <RiArrowUpLine className="text-lg transition-transform duration-200 group-hover:-translate-y-0.5" />
+                  </button>
+
                 </div>
               </div>
             </div>

@@ -39,14 +39,15 @@ const Hero = () => {
 
       {/* Overlays */}
       <div className="absolute inset-0 bg-black/35" />
-      <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/45 to-transparent" />
-      <div className="pointer-events-none absolute inset-0 bg-radial-[circle_at_30%_20%] from-white/10 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 hero-radial-1" />
+
 
       {/* Content */}
       <div className="relative z-10">
         <div
           className="
-            mx-auto w-full max-w-[1320px]
+            mx-auto w-full max-w-7xl
             px-5 sm:px-6 lg:px-10
             sm:flex sm:h-full sm:items-center
           "
@@ -200,7 +201,7 @@ const Hero = () => {
                 -mx-5 px-5
                 flex gap-3 overflow-x-auto pb-1
                 sm:mx-0 sm:px-0 sm:overflow-visible sm:grid sm:grid-cols-3
-                [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                hide-scrollbar
               "
               variants={{
                 hidden: { opacity: 0, y: 18 },
@@ -215,7 +216,7 @@ const Hero = () => {
                 <div
                   key={item.title}
                   className="
-                    shrink-0 w-[86%] sm:w-auto
+                    shrink-0 w-10/12 sm:w-auto
                     rounded-2xl border border-white/12 bg-white/7
                     px-4 py-4 backdrop-blur
                   "

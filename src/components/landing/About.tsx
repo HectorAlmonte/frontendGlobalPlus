@@ -28,8 +28,8 @@ const About = () => {
     >
       {/* Fondo sutil para separar del hero (muy leve) */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.10),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(0,0,0,0.04),transparent_55%)]" />
+        <div className="absolute inset-0 about-bg-1" />
+        <div className="absolute inset-0 about-bg-2" />
       </div>
 
       <div className="relative container mx-auto max-w-6xl px-5 sm:px-8">
@@ -137,7 +137,7 @@ const About = () => {
                 relative w-full
                 h-[320px] sm:h-[380px] xl:h-[420px]
                 rounded-3xl overflow-hidden
-                shadow-[0_18px_60px_rgba(0,0,0,0.18)]
+                shadow-2xl
                 bg-primary
               "
               initial={{ scale: 0.98 }}
@@ -147,8 +147,8 @@ const About = () => {
               transition={{ duration: 0.7, ease: "easeOut" }}
             >
               {/* Profundidad */}
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.22),transparent_55%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.28),transparent_55%)]" />
+              <div className="absolute inset-0 about-depth-top" />
+              <div className="absolute inset-0 about-depth-bottom" /> 
               <div className="absolute inset-0 ring-1 ring-white/12" />
 
               {/* Glow */}
@@ -162,7 +162,7 @@ const About = () => {
                     src="/images/about/img2.png"
                     alt="GlobalPlus Logística Integral"
                     fill
-                    className="object-contain drop-shadow-[0_18px_45px_rgba(0,0,0,0.35)]"
+                    className="object-contain drop-shadow-2xl"
                     priority
                   />
                 </div>

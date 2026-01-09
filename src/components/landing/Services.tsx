@@ -148,10 +148,10 @@ const Services = () => {
                   <TabsTrigger
                     value={item.name}
                     className={`
-                      relative w-full h-[112px]
+                      relative w-full h-28
                       bg-white shadow-lg rounded-none px-6 outline-none
                       flex items-center transition-all duration-200
-                      hover:-translate-y-[1px] hover:shadow-xl
+                      hover:-translate-y-px hover:shadow-xl
                       ${isActive ? 'ring-2 ring-primary' : ''}
                     `}
                   >
@@ -181,7 +181,7 @@ const Services = () => {
                     </motion.div>
 
                     {/* Label */}
-                    <div className="pl-[140px] pr-2 w-full text-left">
+                    <div className="pl-36 pr-2 w-full text-left">
                       <div className="uppercase font-primary text-[14px] font-semibold tracking-[.9px] text-primary">
                         {item.label}
                       </div>
@@ -212,7 +212,7 @@ const Services = () => {
                 {/* Top: Title + highlights chips */}
                 <div className="flex flex-col gap-4">
                   <div>
-                    <h3 className="text-[clamp(1.35rem,2.2vw,1.8rem)] font-extrabold tracking-tight text-primary">
+                      <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-primary">
                       {activeItem.title}
                     </h3>
                     <p className="mt-3 text-muted-foreground leading-relaxed max-w-[760px]">
