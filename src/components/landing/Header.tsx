@@ -21,59 +21,117 @@ const Header = () => {
   }
 
   return (
-    <header className="bg-primary backdrop-blur sticky top-0 z-50">
-      {/* borde sutil para separar del hero */}
+    <header
+      className="
+        sticky top-0 z-50
+        bg-primary/80 backdrop-blur-md
+        supports-[backdrop-filter]:bg-primary/70
+      "
+    >
+      {/* borde sutil + “hairline” */}
       <div className="border-b border-white/10">
         <div className="mx-auto max-w-[1320px] px-6 lg:px-10">
-          {/* más compacto */}
-          <div className="flex h-[72px] items-center justify-between">
+          <div className="flex h-[76px] items-center justify-between">
             {/* LOGO */}
-            <Logo />
+            <div className="flex items-center gap-3">
+              <Logo />
+            </div>
 
-            {/* DERECHA: MENU + BOTON */}
+            {/* DESKTOP */}
             <div className="hidden xl:flex items-center gap-10">
               {/* MENU */}
               <nav aria-label="Navegación principal">
-                <ul className="flex items-center gap-5 text-white/90">
+                <ul className="flex items-center gap-7">
                   {links.map((link) => (
-                    <li
-                      key={link.path}
-                      className="text-[13px] uppercase font-primary font-semibold tracking-[1.2px]
-                                 after:content-['/'] after:ml-5 after:mr-0 last:after:content-none after:text-white/25"
-                    >
+                    <li key={link.path} className="relative">
                       <ScrollLink
                         to={link.path}
                         smooth
                         spy
                         offset={-90}
-                        className="cursor-pointer transition-colors hover:text-white"
-                        activeClass="text-accent"
+                        className="
+                          group cursor-pointer
+                          text-[13px] uppercase font-primary font-semibold
+                          tracking-[1.4px]
+                          text-white/85 hover:text-white
+                          transition-colors
+                        "
+                        activeClass="is-active"
                       >
-                        {link.name}
+                        <span className="relative inline-flex pb-1">
+                          {link.name}
+
+                          {/* underline animado */}
+                          <span
+                            className="
+                              pointer-events-none
+                              absolute left-0 -bottom-0.5 h-[2px] w-full
+                              scale-x-0 group-hover:scale-x-100
+                              origin-left transition-transform duration-200
+                              bg-white/70
+                            "
+                          />
+                        </span>
                       </ScrollLink>
+
+                      {/* Estilo para link activo (react-scroll pone la clase en el <a>) */}
+                      <style jsx global>{`
+                        .is-active {
+                          color: hsl(var(--accent)) !important;
+                        }
+                        .is-active span > span {
+                          transform: scaleX(1) !important;
+                          background: hsl(var(--accent)) !important;
+                        }
+                      `}</style>
                     </li>
                   ))}
                 </ul>
               </nav>
 
-              {/* BOTON SISTEMA: más “premium” y menos pesado */}
+              {/* CTA */}
               <button
                 type="button"
                 onClick={handleClick}
-                className="group h-[46px] min-w-[190px] pl-4 pr-2.5
-                           flex items-center justify-between
-                           bg-white text-primary
-                           border border-white/30
-                           shadow-sm
-                           transition-all duration-200
-                           hover:-translate-y-px hover:shadow-md"
+                className="
+                  group relative
+                  h-[46px] min-w-[190px]
+                  inline-flex items-center justify-center
+                  rounded-full
+                  bg-white text-primary
+                  border border-white/30
+                  shadow-sm
+                  transition-all duration-200
+                  hover:-translate-y-px hover:shadow-md
+                  active:translate-y-0
+                  overflow-hidden
+                "
               >
-                <span className="flex-1 text-center tracking-[1.2px] font-primary font-extrabold text-[13px] uppercase">
-                  Sistema
-                </span>
+                {/* brillo sutil */}
+                <span
+                  className="
+                    pointer-events-none absolute inset-0
+                    opacity-0 group-hover:opacity-100
+                    transition-opacity duration-300
+                    bg-gradient-to-r from-transparent via-black/5 to-transparent
+                  "
+                />
 
-                <span className="ml-3 grid h-9 w-9 place-items-center bg-primary">
-                  <RiArrowRightUpLine className="text-white text-lg group-hover:rotate-45 transition-transform duration-200" />
+                <span className="relative flex items-center gap-3 px-5">
+                  <span className="tracking-[1.2px] font-primary font-extrabold text-[13px] uppercase">
+                    Sistema
+                  </span>
+
+                  <span
+                    className="
+                      grid h-9 w-9 place-items-center
+                      rounded-full bg-primary
+                      transition-transform duration-200
+                      group-hover:rotate-6
+                    "
+                  >
+                    <RiArrowRightUpLine className="text-white text-lg group-hover:rotate-45 transition-transform duration-200" />
+                  </span>
                 </span>
               </button>
             </div>

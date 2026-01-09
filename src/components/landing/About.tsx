@@ -2,19 +2,41 @@
 
 import React from "react"
 import Pretitle from "@/components/landing/basicComponents/Pretitle"
-import ButtonHero from "./basicComponents/ButtonHero"
 import Image from "next/image"
 import { motion } from "framer-motion"
+import { RiArrowRightUpLine } from "react-icons/ri"
+import { useRouter } from "next/navigation"
 
 const About = () => {
-  return (
-    <section id="about" className="py-16 sm:py-20 xl:py-28 overflow-hidden">
-      <div className="container mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="flex flex-col gap-14 xl:flex-row xl:items-center xl:justify-between">
+  const router = useRouter()
 
+  const handleContact = () => {
+    // Si tu botón abre contacto directo a sección:
+    const el = document.getElementById("contact")
+    if (el) el.scrollIntoView({ behavior: "smooth" })
+    // o si prefieres ruta:
+    // router.push('/contact')
+  }
+
+  return (
+    <section
+      id="about"
+      className="
+        relative overflow-hidden
+        py-16 sm:py-20 xl:py-28
+      "
+    >
+      {/* Fondo sutil para separar del hero (muy leve) */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.10),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(0,0,0,0.04),transparent_55%)]" />
+      </div>
+
+      <div className="relative container mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="flex flex-col gap-14 xl:flex-row xl:items-center xl:justify-between">
           {/* TEXT */}
           <motion.div
-            className="max-w-[540px] text-center xl:text-left"
+            className="max-w-[560px] text-center xl:text-left"
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.35 }}
@@ -23,7 +45,7 @@ const About = () => {
             <Pretitle text="Sobre nosotros" center />
 
             <motion.h2
-              className="h2 mt-4 mb-6"
+              className="mt-4 mb-5 text-[clamp(1.9rem,3.2vw,2.6rem)] font-extrabold leading-tight tracking-tight"
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
@@ -33,7 +55,7 @@ const About = () => {
             </motion.h2>
 
             <motion.p
-              className="mb-10 text-muted-foreground leading-relaxed"
+              className="mb-9 text-muted-foreground leading-relaxed text-[15px] sm:text-[17px]"
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
@@ -45,14 +67,60 @@ const About = () => {
               precisión e innovación.
             </motion.p>
 
+            {/* CTA consistente con header/hero */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
               transition={{ duration: 0.55, ease: "easeOut", delay: 0.28 }}
               whileHover={{ y: -1 }}
+              className="flex justify-center xl:justify-start"
             >
-              <ButtonHero text="Contáctanos" />
+              <button
+                type="button"
+                onClick={handleContact}
+                className="
+                  group relative
+                  h-[46px] min-w-[210px]
+                  inline-flex items-center justify-center
+                  rounded-full
+                  bg-primary text-white
+                  border border-primary/30
+                  shadow-sm
+                  transition-all duration-200
+                  hover:-translate-y-px hover:shadow-md
+                  active:translate-y-0
+                  overflow-hidden
+                "
+              >
+                {/* brillo sutil */}
+                <span
+                  className="
+                    pointer-events-none absolute inset-0
+                    opacity-0 group-hover:opacity-100
+                    transition-opacity duration-300
+                    bg-gradient-to-r from-transparent via-white/10 to-transparent
+                  "
+                />
+
+                <span className="relative flex items-center gap-3 px-5">
+                  <span className="tracking-[1.2px] font-primary font-extrabold text-[13px] uppercase">
+                    Contáctanos
+                  </span>
+
+                  <span
+                    className="
+                      grid h-9 w-9 place-items-center
+                      rounded-full bg-white/10
+                      border border-white/20
+                      transition-transform duration-200
+                      group-hover:rotate-6
+                    "
+                  >
+                    <RiArrowRightUpLine className="text-white text-lg group-hover:rotate-45 transition-transform duration-200" />
+                  </span>
+                </span>
+              </button>
             </motion.div>
           </motion.div>
 
@@ -68,24 +136,26 @@ const About = () => {
               className="
                 relative w-full
                 h-[320px] sm:h-[380px] xl:h-[420px]
-                rounded-3xl overflow-hidden shadow-lg
+                rounded-3xl overflow-hidden
+                shadow-[0_18px_60px_rgba(0,0,0,0.18)]
                 bg-primary
               "
               initial={{ scale: 0.98 }}
               whileInView={{ scale: 1 }}
+              whileHover={{ scale: 1.01 }}
               viewport={{ once: true, amount: 0.35 }}
               transition={{ duration: 0.7, ease: "easeOut" }}
             >
-              {/* Fondo con profundidad (se ve más pro que un azul plano) */}
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.20),transparent_55%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.25),transparent_55%)]" />
-              <div className="absolute inset-0 ring-1 ring-white/10" />
+              {/* Profundidad */}
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.22),transparent_55%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.28),transparent_55%)]" />
+              <div className="absolute inset-0 ring-1 ring-white/12" />
 
-              {/* Glow sutil */}
+              {/* Glow */}
               <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
               <div className="absolute -left-24 -bottom-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
-              {/* Imagen: llena el card con padding, sin deformarse */}
+              {/* Imagen */}
               <div className="relative h-full w-full p-8 sm:p-10 xl:p-12">
                 <div className="relative h-full w-full">
                   <Image
@@ -99,7 +169,6 @@ const About = () => {
               </div>
             </motion.div>
           </motion.div>
-
         </div>
       </div>
     </section>

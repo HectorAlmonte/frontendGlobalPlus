@@ -11,8 +11,8 @@ import { PiPhoneFill, PiEnvelopeFill, PiMapPinFill } from 'react-icons/pi'
 
 const Contact = () => {
   return (
-    <section id="contact" className="py-16 sm:py-20 xl:py-28 bg-slate-100">
-      <div className="container mx-auto px-5 sm:px-8">
+    <section id="contact" className="py-16 sm:py-20 xl:py-28 bg-muted/30">
+      <div className="container mx-auto px-5 sm:px-8 max-w-6xl">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
@@ -22,11 +22,11 @@ const Contact = () => {
           className="text-center max-w-2xl mx-auto"
         >
           <Pretitle text="Contacto" center />
-          <h2 className="text-3xl sm:text-4xl font-semibold mt-4 mb-4 text-slate-900">
+          <h2 className="h2 mt-4 mb-4">
             ¿Listo para comenzar?
           </h2>
-          <p className="text-slate-600 leading-relaxed">
-            Cuéntanos qué necesitas y te responderemos con una propuesta lo antes posible.
+          <p className="text-muted-foreground leading-relaxed">
+            Cuéntanos sobre tu operación y te responderemos con una propuesta clara y personalizada.
           </p>
         </motion.div>
 
@@ -37,43 +37,49 @@ const Contact = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
-            className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm"
+            className="rounded-2xl border border-border bg-white p-6 sm:p-7 shadow-sm"
           >
-            <h3 className="text-xl font-semibold text-slate-900">
+            <h3 className="text-xl font-extrabold text-primary">
               Información de contacto
             </h3>
-            <p className="mt-3 text-slate-600 leading-relaxed">
-              Estamos listos para atenderte. Escríbenos o llámanos y coordinamos.
+            <p className="mt-3 text-muted-foreground leading-relaxed">
+              Nuestro equipo está listo para atenderte y evaluar tu necesidad operativa.
             </p>
 
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 space-y-5">
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <PiPhoneFill className="text-2xl text-slate-900" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <PiPhoneFill className="text-2xl text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Teléfono</p>
-                  <p className="text-slate-900 font-medium">+51 915 149 329</p>
+                  <p className="text-sm text-muted-foreground">Teléfono</p>
+                  <p className="font-semibold text-foreground">
+                    +51 915 149 329
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <PiEnvelopeFill className="text-2xl text-slate-900" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <PiEnvelopeFill className="text-2xl text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Correo</p>
-                  <p className="text-slate-900 font-medium">ventas@globalpluscorporation.com</p>
+                  <p className="text-sm text-muted-foreground">Correo</p>
+                  <p className="font-semibold text-foreground">
+                    ventas@globalpluscorporation.com
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <PiMapPinFill className="text-2xl text-slate-900" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <PiMapPinFill className="text-2xl text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Ubicación</p>
-                  <p className="text-slate-900 font-medium">Perú</p>
+                  <p className="text-sm text-muted-foreground">Ubicación</p>
+                  <p className="font-semibold text-foreground">
+                    Perú
+                  </p>
                 </div>
               </div>
             </div>
@@ -85,24 +91,34 @@ const Contact = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
-            className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm"
+            className="rounded-2xl border border-border bg-white p-6 sm:p-7 shadow-sm"
             onSubmit={(e) => e.preventDefault()}
           >
-            <h3 className="text-xl font-semibold text-slate-900">Envíanos un mensaje</h3>
-            <p className="mt-3 text-slate-600 leading-relaxed">
-              Completa el formulario y te contactaremos.
+            <h3 className="text-xl font-extrabold text-primary">
+              Envíanos un mensaje
+            </h3>
+            <p className="mt-3 text-muted-foreground leading-relaxed">
+              Completa el formulario y nos pondremos en contacto contigo.
             </p>
 
             <div className="mt-6 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input placeholder="Nombre" />
+                <Input placeholder="Nombre completo" />
                 <Input placeholder="Teléfono" />
               </div>
-              <Input placeholder="Correo" type="email" />
-              <Input placeholder="Asunto" />
-              <Textarea placeholder="Mensaje" className="min-h-[140px]" />
 
-              <Button className="w-full sm:w-auto">
+              <Input placeholder="Correo corporativo" type="email" />
+              <Input placeholder="Asunto" />
+
+              <Textarea
+                placeholder="Cuéntanos brevemente sobre tu operación o necesidad"
+                className="min-h-[140px]"
+              />
+
+              <Button
+                type="submit"
+                className="mt-2 w-full sm:w-auto px-8 font-semibold"
+              >
                 Enviar mensaje
               </Button>
             </div>
