@@ -89,7 +89,7 @@ const Work = () => {
             <div className="pointer-events-none absolute inset-0 work-radial-1" />
             <div className="pointer-events-none absolute inset-0 work-radial-2" />
             <Image
-              src="/images/work/workimg.png"
+              src="/images/work/workImg.png"
               alt="Proceso de trabajo"
               fill
               priority={false}
