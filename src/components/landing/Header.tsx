@@ -17,7 +17,7 @@ const Header = () => {
   const router = useRouter()
 
   const handleClick = () => {
-    router.push("/work-in-progress")
+    router.push("/login")
   }
 
   return (

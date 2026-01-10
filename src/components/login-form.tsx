@@ -1,8 +1,6 @@
 "use client"
 
-import Cookies from "js-cookie"
 import React, { useEffect, useState } from "react"
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -27,6 +25,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
@@ -34,11 +33,11 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ dni, password }),
+          body: JSON.stringify({ dni: dni.trim(), password }),
         }
       )
 
-      const data: { user?: unknown; message?: string } = await res.json()
+      const data: { user?: any; message?: string } = await res.json()
 
       if (!res.ok) {
         alert(data.message ?? "Error de login")
@@ -47,7 +46,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
       if (data.user) {
         localStorage.setItem("user_data", JSON.stringify(data.user))
-        setUser(data.user as any) // si tienes el tipo User en tu proyecto, lo tipamos bien
+        setUser(data.user)
       }
 
       router.push("/dashboard")
@@ -57,9 +56,21 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
     }
   }
 
+  // ✅ Como el token es httpOnly, NO se puede leer con js-cookie.
+  // ✅ Validamos sesión consultando al backend.
   useEffect(() => {
-    const token = Cookies.get("token")
-    if (token) router.push("/dashboard")
+    const checkSession = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
+          { credentials: "include" }
+        )
+
+        if (res.ok) router.push("/dashboard")
+      } catch {}
+    }
+
+    checkSession()
   }, [router])
 
   return (
@@ -69,18 +80,19 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           <form className="p-6 md:p-8" onSubmit={handleLogin}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">Sistema de gestion</h1>
+                <h1 className="text-2xl font-bold">Sistema de gestión</h1>
                 <p className="text-muted-foreground text-balance">
                   Ingrese sus credenciales de acceso para continuar.
                 </p>
               </div>
 
               <Field>
-                <FieldLabel htmlFor="dni">Dni</FieldLabel>
+                <FieldLabel htmlFor="dni">DNI</FieldLabel>
                 <Input
                   id="dni"
                   placeholder="12345678"
                   required
+                  value={dni}
                   onChange={(e) => setDni(e.target.value)}
                 />
               </Field>
@@ -92,13 +104,14 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                     href="#"
                     className="ml-auto text-sm underline-offset-2 hover:underline"
                   >
-                    Olvideste tu contrase?
+                    ¿Olvidaste tu contraseña?
                   </a>
                 </div>
                 <Input
                   id="password"
                   type="password"
                   required
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </Field>
@@ -108,7 +121,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
               </Field>
 
               <FieldDescription className="text-center">
-                No tiene una cuenta?<a href="#"> Contancanos</a>
+                ¿No tiene una cuenta? <a href="#">Contáctanos</a>
               </FieldDescription>
             </FieldGroup>
           </form>
