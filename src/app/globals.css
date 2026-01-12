@@ -148,15 +148,17 @@
 .work-radial-2 {
   background: radial-gradient(circle at 80% 80%, rgba(0,0,0,0.22), transparent 60%);
 }
-/* react-scroll active link */
-.is-active {
-  color: hsl(var(--accent)) !important;
+/* Landing header active link */
+.landing-header .is-active {
+  color: rgba(255, 255, 255, 0.95) !important;
 }
 
-.is-active span > span {
-  transform: scaleX(1) !important;
-  background: hsl(var(--accent)) !important;
+.landing-header .is-active span > span {
+  height: 2px;
+  background: white !important;
 }
+
+
 
 
 

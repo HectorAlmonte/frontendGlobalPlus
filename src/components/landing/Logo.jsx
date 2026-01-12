@@ -14,7 +14,7 @@ const Logo = () => {
       aria-label="Ir al inicio"
     >
       <Image
-        src="/logo/logo-texto.png"
+        src="/logo/logo.png"
         alt="Global Plus"
         width={140}
         height={36}

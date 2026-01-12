@@ -51,7 +51,7 @@ const Footer = () => {
             <div>
               <div className="relative w-[220px] h-16">
                 <Image
-                  src="/logo/logo-texto.png"
+                  src="/logo/logo.png"
                   alt="Global Plus"
                   fill
                   className="object-contain"

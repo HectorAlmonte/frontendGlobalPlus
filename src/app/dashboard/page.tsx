@@ -4,6 +4,7 @@ import { SectionCards } from "@/components/section-cards"
 import { ChartRadialStacked } from "@/components/chart-radial-stacked"
 import { useEffect } from "react"
 import { useWord } from "@/context/AppContext"
+import FormsList from "@/components/forms/FormsList"
 export default function Page() {
 
   const { setWord } = useWord();
@@ -18,8 +19,10 @@ export default function Page() {
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-3 py-3 md:gap-6 md:py-6">
+            <FormsList />
             <SectionCards />
             <ChartRadialStacked />
+            
           </div>
         </div>
       </div>

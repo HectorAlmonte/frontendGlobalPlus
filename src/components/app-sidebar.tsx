@@ -1,145 +1,144 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AudioWaveform,
   BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
   ClipboardPen,
+  Command,
+  GalleryVerticalEnd,
+  Settings2,
   ShieldCheck,
   ChartBar,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { title } from "process"
-import { ModeToggle } from "./mode-toggle"
-import { useWord } from "@/context/AppContext"
+} from "@/components/ui/sidebar";
 
-// This is sample data.
+import { useWord } from "@/context/AppContext";
+
+/** 1) Diccionario iconName -> IconComponent */
+const iconMap: Record<string, any> = {
+  ClipboardPen,
+  ShieldCheck,
+  BookOpen,
+  Settings2,
+  ChartBar,
+  GalleryVerticalEnd,
+  AudioWaveform,
+  Command,
+};
+
+type NavItemDTO = {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string | null;
+  order?: number;
+};
+
+type NavSectionDTO = {
+  id: string;
+  title: string;
+  icon?: string | null;
+  order?: number;
+  items: NavItemDTO[];
+};
+
 const data = {
   teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Operaciones",
-      url: "#",
-      icon: ClipboardPen,
-      roles: ["admin", "seguridad"],
-      items: [
-        {
-          title: "Ordenes",
-          url: "/dashboard/ordenes",
-          roles: ["admin", "seguridad"],
-        },
-        {
-          title: "Visitas",
-          url: "/dashboard/visitas",
-          roles: ["admin"],
-        }
-      ],
-    },
-    {
-      title: "Informacion",
-      url: "#",
-      icon: BookOpen,
-      roles: ["admin"],
-      items: [
-        { title: "Camiones", url: "#", roles: ["admin"] },
-        { title: "Conductores", url: "#", roles: ["admin"] },
-        { title: "Patios", url: "#", roles: ["admin"] },
-      ],
-    },
-    {
-      title: "Configuracion",
-      url: "#",
-      icon: Settings2,
-      roles: ["admin"],
-      items: [
-        { title: "Usuarios", url: "#", roles: ["admin"] },
-      ],
-    },
-    {
-      title: "Seguridad y monitoreo",
-      url: "#",
-      icon: ShieldCheck,
-      roles: ["admin", "seguridad"],
-      items: [
-        { title: "Camaras", url: "#", roles: ["admin", "seguridad"] },
-        { title: "Alarmas", url: "#", roles: ["admin", "seguridad"] },
-        { title: "Fromulario Base", url: "/dashboard/seguridad", roles: ["admin","seguridad"] },
-      ],
-    }
+    { name: "Acme Inc", logo: GalleryVerticalEnd, plan: "Enterprise" },
+    { name: "Acme Corp.", logo: AudioWaveform, plan: "Startup" },
+    { name: "Evil Corp.", logo: Command, plan: "Free" },
   ],
   projects: [
-    {
-      name: "Menu principal",
-      url: "/dashboard",
-      icon: ChartBar,
-    },
-
+    { name: "Menu principal", url: "/dashboard", icon: ChartBar },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-
+  const API = process.env.NEXT_PUBLIC_API_URL;
   const { user, loadingUser } = useWord();
 
-  if (loadingUser) return null; // evita errores
+  const [nav, setNav] = React.useState<any[]>([]);
+  const [loadingNav, setLoadingNav] = React.useState(true);
 
-  const role = user?.role ?? ""; // 👈 asegura string
+  React.useEffect(() => {
+    if (loadingUser) return;
+    if (!user) return;
 
-  const filteredNav = data.navMain
-    .filter(section => section.roles?.includes(role))
-    .map(section => ({
-      ...section,
-      items: section.items?.filter(item => item.roles?.includes(role))
-  }));
+    const run = async () => {
+      try {
+        setLoadingNav(true);
+
+        const res = await fetch(`${API}/api/nav`, {
+          credentials: "include",
+        });
+
+        const body = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(body?.message || "Error nav");
+
+        const sections = (Array.isArray(body) ? body : []) as NavSectionDTO[];
+
+        // 2) Adaptar a la forma que espera NavMain (icon como componente)
+        const mapped = sections.map((s) => ({
+          title: s.title,
+          url: "#",
+          icon: s.icon ? iconMap[s.icon] : undefined,
+          items: (s.items || []).map((it) => ({
+            title: it.title,
+            url: it.url,
+            icon: it.icon ? iconMap[it.icon] : undefined,
+          })),
+        }));
+
+        setNav(mapped);
+      } catch (e) {
+        console.error(e);
+        setNav([]); // fallback
+      } finally {
+        setLoadingNav(false);
+      }
+    };
+
+    run();
+  }, [API, user, loadingUser]);
+
+  if (loadingUser) return null;
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
+
       <SidebarContent>
         <NavProjects projects={data.projects} />
-        <NavMain items={filteredNav} />  
+
+        {/* Nav dinámico */}
+        {loadingNav ? (
+          <div className="px-3 py-2 text-sm text-muted-foreground">
+            Cargando menú…
+          </div>
+        ) : (
+          <NavMain items={nav} />
+        )}
       </SidebarContent>
+
       <SidebarFooter>
         <NavUser user={user} />
       </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
