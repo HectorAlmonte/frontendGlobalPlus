@@ -20,8 +20,8 @@ export default function Page() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-3 py-3 md:gap-6 md:py-6">
             <FormsList />
-            <SectionCards />
-            <ChartRadialStacked />
+            {/* <SectionCards />
+            <ChartRadialStacked /> */}
             
           </div>
         </div>

@@ -3,12 +3,9 @@
 import * as React from "react";
 import Image from "next/image";
 import {
-  AudioWaveform,
-  BookOpen,
   ClipboardPen,
   ClipboardList,
   Command,
-  GalleryVerticalEnd,
   Settings2,
   ShieldCheck,
   ChartBar,
@@ -19,6 +16,8 @@ import {
   CalendarDays,
   BarChart3,
   CircleHelp,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -30,27 +29,20 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import { useWord } from "@/context/AppContext";
 
-/** iconName -> IconComponent */
 const iconMap: Record<string, any> = {
   ClipboardPen,
   ShieldCheck,
-  BookOpen,
   Settings2,
   ChartBar,
-  GalleryVerticalEnd,
-  AudioWaveform,
   Command,
-
-  // los de tu seed
   ClipboardList,
   UserPlus,
   Clock,
-
-  // por si agregas luego
   Home,
   Coffee,
   CalendarDays,
@@ -80,10 +72,13 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const API = process.env.NEXT_PUBLIC_API_URL;
   const { user, loadingUser } = useWord();
+  const { state } = useSidebar();
+
+  const isCollapsed = state === "collapsed";
 
   const [nav, setNav] = React.useState<any[]>([]);
   const [loadingNav, setLoadingNav] = React.useState(true);
-  const [navError, setNavError] = React.useState<string | null>(null); // ✅ nuevo
+  const [navError, setNavError] = React.useState<string | null>(null);
 
   const resolveIcon = (iconName?: string | null) => {
     if (!iconName) return undefined;
@@ -93,17 +88,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     if (loadingUser) return;
 
-    // ✅ si NO hay user, no te quedes pegado en "Cargando..."
     if (!user) {
       setNav([]);
-      setNavError("No hay usuario cargado (user=null).");
+      setNavError("No hay usuario cargado.");
       setLoadingNav(false);
       return;
     }
 
-    // ✅ si falta API evitamos quedar colgados
     if (!API) {
-      console.error("NEXT_PUBLIC_API_URL no está definido");
       setNav([]);
       setNavError("Falta NEXT_PUBLIC_API_URL");
       setLoadingNav(false);
@@ -111,29 +103,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // ✅ 10s
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const run = async () => {
       try {
         setLoadingNav(true);
         setNavError(null);
 
-        console.log("NAV -> fetching:", `${API}/api/nav`);
-
-        const res = await fetch(`${API}/api/nav`, {
-          credentials: "include",
-          signal: controller.signal,
-        });
-
+        const url = `${API}/api/navigation/sidebar`;
+        const res = await fetch(url, { credentials: "include", signal: controller.signal });
         const body = await res.json().catch(() => null);
-
-        console.log("NAV status:", res.status, "body:", body);
 
         if (!res.ok) throw new Error(body?.message || `Error nav (${res.status})`);
 
-        const sections = (Array.isArray(body) ? body : []) as NavSectionDTO[];
+        const sections = (Array.isArray(body?.data) ? body.data : []) as NavSectionDTO[];
 
-        // ✅ opcional: orden por "order" si viene
+        if (sections.length === 0) {
+          setNav([]);
+          setNavError("No hay items asignados a tu rol aún.");
+          return;
+        }
+
         sections.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999));
 
         const mapped = sections.map((s) => ({
@@ -150,13 +140,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             })),
         }));
 
-        setNav(mapped);
-      } catch (e: any) {
-        if (e?.name === "AbortError") {
-          setNavError("Timeout cargando /api/nav (revisar backend/CORS/cookies).");
+        const nonEmpty = mapped.filter((s) => (s.items?.length ?? 0) > 0);
+
+        if (nonEmpty.length === 0) {
+          setNav([]);
+          setNavError("No hay items visibles para tu rol (revisa NavItemRole).");
           return;
         }
-        console.error("NAV error:", e);
+
+        setNav(nonEmpty);
+      } catch (e: any) {
+        if (e?.name === "AbortError") {
+          setNavError("Timeout cargando navegación (revisa backend/cookies).");
+          return;
+        }
         setNav([]);
         setNavError(e?.message || "Error cargando navegación");
       } finally {
@@ -176,54 +173,86 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (loadingUser) return null;
 
   return (
-    <Sidebar collapsible="icon" className="bg-white border-r" {...props}>
+    <Sidebar
+      collapsible="icon"
+      className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
+      {...props}
+    >
       <SidebarHeader className="px-2 pt-2">
-        <div className="rounded-xl bg-white shadow-sm ring-1 ring-black/5 px-3 py-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-white p-1 ring-1 ring-black/5 shadow-sm flex items-center justify-center">
+        {/* ✅ HEADER: expandido = card, colapsado = icon button (sin “pastilla vacía”) */}
+        {isCollapsed ? (
+          <div className="flex items-center justify-center">
+            <div className="h-11 w-11 rounded-xl border bg-card shadow-sm flex items-center justify-center">
               <Image
                 src="/logo/logo.png"
                 alt="Global Plus"
-                width={32}
-                height={32}
+                width={28}
+                height={28}
                 className="object-contain"
                 priority
               />
             </div>
-
-            <div className="leading-tight">
-              <div className="text-sm font-semibold tracking-tight">
-                Global Plus
+          </div>
+        ) : (
+          <div className="rounded-xl border bg-card text-card-foreground shadow-sm px-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg border bg-background p-1 shadow-sm flex items-center justify-center">
+                <Image
+                  src="/logo/logo.png"
+                  alt="Global Plus"
+                  width={32}
+                  height={32}
+                  className="object-contain"
+                  priority
+                />
               </div>
-              <div className="text-xs text-muted-foreground">
-                Sistema de gestión
+
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-sm font-semibold tracking-tight">
+                  Global Plus
+                </div>
+                <div className="truncate text-xs text-muted-foreground">
+                  Sistema de gestión
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="mt-3 h-px bg-slate-200" />
+        <div className="mt-3 border-t border-border" />
       </SidebarHeader>
 
       <SidebarContent className="px-1">
         <NavProjects projects={data.projects} />
 
-        <div className="my-2 h-px bg-slate-200/70" />
+        <div className="my-2 border-t border-border/70" />
 
         {loadingNav ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">
-            Cargando menú…
-          </div>
+          isCollapsed ? (
+            <div className="flex items-center justify-center py-2 text-muted-foreground" title="Cargando menú…">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+          ) : (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              Cargando menú…
+            </div>
+          )
         ) : navError ? (
-          <div className="px-3 py-2 text-sm text-red-500">
-            {navError}
-          </div>
+          isCollapsed ? (
+            <div className="flex items-center justify-center py-2 text-destructive" title={navError}>
+              <AlertTriangle className="size-4" />
+            </div>
+          ) : (
+            <div className="mx-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {navError}
+            </div>
+          )
         ) : (
           <NavMain items={nav} />
         )}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-border/70">
         <NavUser user={user} />
       </SidebarFooter>
 

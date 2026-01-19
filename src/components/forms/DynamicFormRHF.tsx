@@ -6,7 +6,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { normalizeType } from "@/helpers/form-helpers";
 
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -28,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ta } from "zod/v4/locales";
 
 type FieldType =
   | "TEXT"
@@ -69,7 +67,6 @@ function buildZodSchema(fields: FormFieldDTO[]) {
 
     switch (t) {
       case "NUMBER": {
-        // Base: puede venir string o number
         let base = z
           .union([z.string(), z.number()])
           .transform((v) => (typeof v === "string" ? v.trim() : v));
@@ -82,7 +79,9 @@ function buildZodSchema(fields: FormFieldDTO[]) {
         } else {
           schema = base
             .optional()
-            .transform((v) => (v === undefined || v === "" ? undefined : Number(v)))
+            .transform((v) =>
+              v === undefined || v === "" ? undefined : Number(v)
+            )
             .refine((n) => n === undefined || !Number.isNaN(n), {
               message: `${f.label} inválido`,
             });
@@ -92,7 +91,6 @@ function buildZodSchema(fields: FormFieldDTO[]) {
 
       case "CHECKBOX": {
         schema = z.boolean();
-        // required checkbox = true
         if (f.required) {
           schema = schema.refine((v) => v === true, {
             message: `${f.label} es requerido`,
@@ -104,7 +102,6 @@ function buildZodSchema(fields: FormFieldDTO[]) {
       }
 
       default: {
-        // TEXT, TEXTAREA, SELECT, DATE, TIME
         schema = z.string();
         if (f.required) {
           schema = (schema as z.ZodString).min(1, {
@@ -131,13 +128,42 @@ function buildDefaultValues(fields: FormFieldDTO[]) {
   return defaults;
 }
 
-export default function DynamicFormRHF({ slug }: { slug: string }) {
+function toDateInputValue(v: any) {
+  if (!v) return "";
+  // admite Date, ISO, etc.
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+type DynamicFormRHFProps = {
+  slug: string;
+  onSuccess?: (result?: any) => void;
+
+  // ✅ NUEVO: modo edición
+  mode?: "create" | "edit";
+  recordId?: string;
+};
+
+export default function DynamicFormRHF({
+  slug,
+  onSuccess,
+  mode = "create",
+  recordId,
+}: DynamicFormRHFProps) {
   const API = process.env.NEXT_PUBLIC_API_URL;
 
   const [formDef, setFormDef] = useState<FormDTO | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [serverMsg, setServerMsg] = useState<string | null>(null);
   const [serverErr, setServerErr] = useState<string | null>(null);
+
+  // ✅ NUEVO: carga del registro para prefill
+  const [recordLoading, setRecordLoading] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -171,7 +197,10 @@ export default function DynamicFormRHF({ slug }: { slug: string }) {
   }, [formDef]);
 
   const schema = useMemo(() => buildZodSchema(sortedFields), [sortedFields]);
-  const defaultValues = useMemo(() => buildDefaultValues(sortedFields), [sortedFields]);
+  const defaultValues = useMemo(
+    () => buildDefaultValues(sortedFields),
+    [sortedFields]
+  );
 
   const form = useForm<FieldValues>({
     resolver: zodResolver(schema),
@@ -179,17 +208,103 @@ export default function DynamicFormRHF({ slug }: { slug: string }) {
     mode: "onSubmit",
   });
 
+  // Reset base cuando llega el formDef
   useEffect(() => {
     if (!formDef) return;
     form.reset(defaultValues);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formDef]);
 
+  // ✅ Prefill cuando está en edit
+  useEffect(() => {
+    const run = async () => {
+      if (!API) return;
+      if (mode !== "edit") return;
+      if (!recordId) return;
+      if (!formDef) return;
+
+      try {
+        setRecordLoading(true);
+        setServerErr(null);
+        setServerMsg(null);
+
+        // OJO: aquí usamos tu endpoint nuevo de staff
+        const res = await fetch(`${API}/api/staff/${recordId}`, {
+          credentials: "include",
+        });
+        const body = await res.json().catch(() => null);
+
+        if (!res.ok) throw new Error(body?.message || `Error (${res.status})`);
+
+        const emp = body?.data ?? body;
+
+        // Mapeo: intenta en emp, luego en emp.user
+        const values: Record<string, any> = { ...defaultValues };
+
+        for (const f of sortedFields) {
+          const key = f.name;
+          const t = normalizeType(f.type);
+
+          let raw =
+            emp?.[key] !== undefined
+              ? emp[key]
+              : emp?.user?.[key] !== undefined
+              ? emp.user[key]
+              : undefined;
+
+          // casos típicos
+          if (raw === undefined && key === "roleId") raw = emp?.role?.id;
+          if (raw === undefined && key === "userRoleId") raw = emp?.user?.role?.id;
+          if (raw === undefined && key === "userIsActive") raw = emp?.user?.isActive;
+
+          if (raw === undefined || raw === null) {
+            values[key] = defaultValues[key];
+            continue;
+          }
+
+          if (t === "CHECKBOX") values[key] = Boolean(raw);
+          else if (t === "DATE") values[key] = toDateInputValue(raw);
+          else values[key] = String(raw);
+        }
+
+        form.reset(values);
+      } catch (e: any) {
+        setServerErr(e?.message || "Error cargando datos para edición");
+      } finally {
+        setRecordLoading(false);
+      }
+    };
+
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [API, mode, recordId, formDef, sortedFields, defaultValues]);
+
   const onSubmit = form.handleSubmit(async (values) => {
     try {
       setServerErr(null);
       setServerMsg(null);
 
+      // ✅ EDIT
+      if (mode === "edit") {
+        if (!recordId) throw new Error("Falta recordId para editar");
+
+        const res = await fetch(`${API}/api/staff/${recordId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(values),
+        });
+
+        const body = await res.json().catch(() => null);
+        if (!res.ok)
+          throw new Error(body?.message || `No se pudo actualizar (${res.status})`);
+
+        setServerMsg(body?.message || "✅ Actualizado correctamente");
+        onSuccess?.(body);
+        return;
+      }
+
+      // ✅ CREATE (lo que ya tenías)
       const res = await fetch(`${API}/api/forms/${slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -198,9 +313,12 @@ export default function DynamicFormRHF({ slug }: { slug: string }) {
       });
 
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.message || `No se pudo enviar (${res.status})`);
+      if (!res.ok)
+        throw new Error(body?.message || `No se pudo enviar (${res.status})`);
 
-      setServerMsg("✅ Enviado correctamente");
+      setServerMsg(body?.message || "✅ Enviado correctamente");
+      form.reset(defaultValues);
+      onSuccess?.(body);
     } catch (e: any) {
       setServerErr(e?.message || "Error enviando formulario");
     }
@@ -216,24 +334,37 @@ export default function DynamicFormRHF({ slug }: { slug: string }) {
         <div className="flex flex-col gap-3 py-3 md:gap-6 md:py-6">
           <Card>
             <CardHeader>
-              <CardTitle>{formDef.name}</CardTitle>
+              <CardTitle>
+                {formDef.name}
+                {mode === "edit" ? " (Edición)" : ""}
+              </CardTitle>
             </CardHeader>
 
             <CardContent>
-              <Form {...form}>
-                <form className="flex flex-col gap-y-3" onSubmit={onSubmit}>
-                  {sortedFields.map((f) => (
-                    <DynamicField key={f.id} field={f} control={form.control} />
-                  ))}
+              {recordLoading ? (
+                <div className="text-sm text-muted-foreground">Cargando datos…</div>
+              ) : (
+                <Form {...form}>
+                  <form className="flex flex-col gap-y-3" onSubmit={onSubmit}>
+                    {sortedFields.map((f) => (
+                      <DynamicField key={f.id} field={f} control={form.control} />
+                    ))}
 
-                  {serverMsg && <p className="text-sm text-green-600">{serverMsg}</p>}
-                  {serverErr && <p className="text-sm text-red-600">{serverErr}</p>}
+                    {serverMsg && <p className="text-sm text-green-600">{serverMsg}</p>}
+                    {serverErr && <p className="text-sm text-red-600">{serverErr}</p>}
 
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? "Enviando..." : "Enviar"}
-                  </Button>
-                </form>
-              </Form>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting
+                        ? mode === "edit"
+                          ? "Guardando..."
+                          : "Enviando..."
+                        : mode === "edit"
+                        ? "Guardar cambios"
+                        : "Enviar"}
+                    </Button>
+                  </form>
+                </Form>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -261,10 +392,10 @@ function DynamicField({
       render={({ field: rhf }) => (
         <FormItem>
           <FormLabel>
-            {field.label} {field.required ? <span className="text-red-500">*</span> : null}
+            {field.label}{" "}
+            {field.required ? <span className="text-red-500">*</span> : null}
           </FormLabel>
 
-          {/* CHECKBOX fuera de FormControl */}
           {t === "CHECKBOX" ? (
             <div className="flex items-center gap-2">
               <input
@@ -275,8 +406,7 @@ function DynamicField({
               <span className="text-sm">{description}</span>
             </div>
           ) : t === "SELECT" ? (
-            // SELECT mejor fuera de FormControl (shadcn)
-            <Select onValueChange={rhf.onChange} defaultValue={rhf.value}>
+            <Select onValueChange={rhf.onChange} value={rhf.value ?? ""}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una opción…" />
               </SelectTrigger>
@@ -289,7 +419,6 @@ function DynamicField({
               </SelectContent>
             </Select>
           ) : (
-            // FormControl SIEMPRE recibe exactamente 1 child
             <FormControl>
               {t === "TEXT" ? (
                 <Input placeholder={field.label} {...rhf} />
@@ -302,7 +431,6 @@ function DynamicField({
               ) : t === "TEXTAREA" ? (
                 <Textarea placeholder={field.label} {...rhf} />
               ) : (
-                // fallback extra (por si algo rarísimo pasa)
                 <Input placeholder={field.label} {...rhf} />
               )}
             </FormControl>
@@ -315,4 +443,3 @@ function DynamicField({
     />
   );
 }
-
