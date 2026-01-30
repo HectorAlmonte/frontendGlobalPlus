@@ -80,6 +80,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [loadingNav, setLoadingNav] = React.useState(true);
   const [navError, setNavError] = React.useState<string | null>(null);
 
+  // ✅ para reintentar 1 vez si hay "cold start"
+  const retryRef = React.useRef(0);
+
   const resolveIcon = (iconName?: string | null) => {
     if (!iconName) return undefined;
     return iconMap[iconName] ?? CircleHelp;
@@ -103,7 +106,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    // ✅ Timeout más alto para evitar que la primera llamada falle
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
     const run = async () => {
       try {
@@ -111,7 +116,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         setNavError(null);
 
         const url = `${API}/api/navigation/sidebar`;
-        const res = await fetch(url, { credentials: "include", signal: controller.signal });
+        const res = await fetch(url, {
+          credentials: "include",
+          signal: controller.signal,
+        });
         const body = await res.json().catch(() => null);
 
         if (!res.ok) throw new Error(body?.message || `Error nav (${res.status})`);
@@ -149,11 +157,74 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
 
         setNav(nonEmpty);
+        retryRef.current = 0; // ✅ resetea retry si cargó bien
       } catch (e: any) {
+        // ✅ Si es AbortError, reintenta 1 vez (cold start típico)
         if (e?.name === "AbortError") {
-          setNavError("Timeout cargando navegación (revisa backend/cookies).");
+          if (retryRef.current < 1) {
+            retryRef.current += 1;
+            // no asustamos al usuario con rojo aún, mostramos "reintentando"
+            setNavError(null);
+            setLoadingNav(true);
+
+            clearTimeout(timeout);
+            controller.abort();
+
+            // re-lanza efecto con un reload "suave"
+            // (simplemente forzamos recarga con un setTimeout y nueva petición)
+            setTimeout(() => {
+              // OJO: no podemos reutilizar controller abortado, así que:
+              // recargamos la página de forma suave (opcional)
+              // mejor: usar window.location.reload() NO.
+              // solución: hacemos una segunda fetch SIN abort controller.
+              fetch(`${API}/api/navigation/sidebar`, { credentials: "include" })
+                .then(async (r) => {
+                  const b = await r.json().catch(() => null);
+                  if (!r.ok) throw new Error(b?.message || `Error nav (${r.status})`);
+
+                  const sections = (Array.isArray(b?.data) ? b.data : []) as NavSectionDTO[];
+                  sections.sort((a, b2) => (a.order ?? 9999) - (b2.order ?? 9999));
+
+                  const mapped = sections.map((s) => ({
+                    title: s.title,
+                    url: "#",
+                    icon: resolveIcon(s.icon),
+                    items: (s.items || [])
+                      .slice()
+                      .sort((a, b2) => (a.order ?? 9999) - (b2.order ?? 9999))
+                      .map((it) => ({
+                        title: it.title,
+                        url: it.url,
+                        icon: resolveIcon(it.icon),
+                      })),
+                  }));
+
+                  const nonEmpty = mapped.filter((s) => (s.items?.length ?? 0) > 0);
+
+                  if (nonEmpty.length === 0) {
+                    setNav([]);
+                    setNavError("No hay items visibles para tu rol (revisa NavItemRole).");
+                    return;
+                  }
+
+                  setNav(nonEmpty);
+                  retryRef.current = 0;
+                })
+                .catch((err2) => {
+                  setNav([]);
+                  setNavError(err2?.message || "Error cargando navegación");
+                })
+                .finally(() => setLoadingNav(false));
+            }, 600);
+
+            return;
+          }
+
+          setNav([]);
+          setNavError("Demoró demasiado cargando menú. Intenta F5.");
           return;
         }
+
         setNav([]);
         setNavError(e?.message || "Error cargando navegación");
       } finally {
@@ -179,7 +250,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {...props}
     >
       <SidebarHeader className="px-2 pt-2">
-        {/* ✅ HEADER: expandido = card, colapsado = icon button (sin “pastilla vacía”) */}
         {isCollapsed ? (
           <div className="flex items-center justify-center">
             <div className="h-11 w-11 rounded-xl border bg-card shadow-sm flex items-center justify-center">
@@ -229,7 +299,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         {loadingNav ? (
           isCollapsed ? (
-            <div className="flex items-center justify-center py-2 text-muted-foreground" title="Cargando menú…">
+            <div
+              className="flex items-center justify-center py-2 text-muted-foreground"
+              title="Cargando menú…"
+            >
               <Loader2 className="size-4 animate-spin" />
             </div>
           ) : (
@@ -239,7 +312,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           )
         ) : navError ? (
           isCollapsed ? (
-            <div className="flex items-center justify-center py-2 text-destructive" title={navError}>
+            <div
+              className="flex items-center justify-center py-2 text-destructive"
+              title={navError}
+            >
               <AlertTriangle className="size-4" />
             </div>
           ) : (
@@ -260,3 +336,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   );
 }
+ 

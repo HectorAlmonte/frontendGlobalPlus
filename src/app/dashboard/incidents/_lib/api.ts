@@ -39,10 +39,15 @@ export async function apiCreateIncident(input: CreateIncidentInput) {
 
   const payload: any = {
     title: input.title.trim() ? input.title.trim() : null,
-    type: input.type.trim(),
+    type: input.type,
     detail: input.detail.trim(),
-    locationLabel: input.locationLabel.trim() ? input.locationLabel.trim() : null,
+    locationLabel: input.locationLabel.trim()
+      ? input.locationLabel.trim()
+      : null,
     causes: causesArr,
+
+    // área
+    areaId: input.areaId.trim() ? input.areaId.trim() : null,
 
     observedKind: input.observedKind,
     observedUserId:
@@ -87,13 +92,38 @@ export async function apiCreateIncident(input: CreateIncidentInput) {
   return created;
 }
 
+export async function apiCloseIncidentForm(
+  incidentId: string,
+  payload: { detail: string; files: File[] }
+) {
+  const fd = new FormData();
+  fd.append("detail", payload.detail);
+
+  for (const f of payload.files || []) {
+    fd.append("files", f);
+  }
+
+  const res = await fetch(
+    `${API_BASE}/api/incidents/${incidentId}/close`,
+    {
+      method: "POST",
+      body: fd,
+      credentials: "include",
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Error cerrando incidencia");
+  }
+
+  return res.json();
+}
+
 /**
  * =========================
  * SEARCH SELECTS (Observed)
  * =========================
- * Tu SearchSelect espera: { value, label }
- * Backend staff.search devuelve: [{ id, label, ... }]
- * Backend areas.search devuelve: [{ id, label }]
  */
 
 export async function apiSearchObservedUsers(q: string): Promise<Option[]> {
@@ -106,7 +136,7 @@ export async function apiSearchObservedUsers(q: string): Promise<Option[]> {
 
   const data = await res.json();
   return (Array.isArray(data) ? data : []).map((x: any) => ({
-    value: String(x.id),   // ✅ aquí x.id = User.id por el fix del backend
+    value: String(x.id),
     label: String(x.label),
   }));
 }
@@ -119,7 +149,7 @@ export async function apiSearchAreas(q: string): Promise<Option[]> {
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Error buscando áreas");
 
-  const data = await res.json(); // [{ id, label }]
+  const data = await res.json();
   return (Array.isArray(data) ? data : []).map((x: any) => ({
     value: String(x.id),
     label: String(x.label),

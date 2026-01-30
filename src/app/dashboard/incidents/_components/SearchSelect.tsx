@@ -26,6 +26,7 @@ type Props = {
 
   fetcher: (q: string) => Promise<Option[]>;
   selectedLabel?: string; // ✅ opcional: para mostrar label aunque no esté en items
+  allowClear?: boolean; // ✅ opcional: permitir limpiar
 };
 
 export default function SearchSelect({
@@ -36,6 +37,7 @@ export default function SearchSelect({
   emptyText = "Sin resultados",
   fetcher,
   selectedLabel,
+  allowClear = false,
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -48,35 +50,63 @@ export default function SearchSelect({
     fetcherRef.current = fetcher;
   }, [fetcher]);
 
+  // ✅ evita setState luego de un unmount / popover close rápido
+  const aliveRef = React.useRef(true);
+  React.useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
   const selected = React.useMemo(() => {
     if (!value) return null;
     return items.find((x) => x.value === value) ?? null;
   }, [items, value]);
 
+  const buttonLabel = value
+    ? selected?.label ?? selectedLabel ?? "Seleccionado"
+    : placeholder;
+
   async function runFetch(q: string) {
     setLoading(true);
     try {
       const res = await fetcherRef.current(q);
-      setItems(res);
+      if (!aliveRef.current) return;
+      setItems(Array.isArray(res) ? res : []);
     } catch (e) {
       console.error(e);
+      if (!aliveRef.current) return;
       setItems([]);
     } finally {
+      if (!aliveRef.current) return;
       setLoading(false);
     }
   }
 
-  // ✅ al abrir: trae lista inicial
+  // ✅ al abrir: lista inicial (sin duplicar llamadas)
   React.useEffect(() => {
     if (!open) return;
-    setQuery("");      // limpia búsqueda
-    runFetch("");      // trae primera lista (top 20)
+
+    setQuery(""); // limpia búsqueda
+    runFetch(""); // trae primera lista
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // ✅ debounce al escribir
+  // ✅ debounce al escribir (pero no dispara por el setQuery("") del open)
+  const didOpenRef = React.useRef(false);
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      didOpenRef.current = false;
+      return;
+    }
+
+    // la primera vez que abre ya hicimos runFetch("")
+    if (!didOpenRef.current) {
+      didOpenRef.current = true;
+      return;
+    }
 
     const t = setTimeout(() => {
       runFetch(query);
@@ -86,14 +116,14 @@ export default function SearchSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, open]);
 
-  const buttonLabel = value
-    ? selected?.label ?? selectedLabel ?? "Seleccionado"
-    : placeholder;
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between">
+        <Button
+          variant="outline"
+          role="combobox"
+          className="w-full justify-between"
+        >
           <span className={cn("truncate", !value && "text-muted-foreground")}>
             {buttonLabel}
           </span>
@@ -101,7 +131,10 @@ export default function SearchSelect({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder={searchPlaceholder}
@@ -109,16 +142,33 @@ export default function SearchSelect({
             onValueChange={setQuery}
           />
 
-          {loading && (
+          {loading ? (
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Buscando...
             </div>
-          )}
+          ) : null}
 
-          <CommandEmpty>{emptyText}</CommandEmpty>
+          {!loading && items.length === 0 ? (
+            <CommandEmpty>{emptyText}</CommandEmpty>
+          ) : null}
 
           <CommandGroup>
+            {allowClear && value ? (
+              <CommandItem
+                key="__clear__"
+                value="__clear__"
+                onSelect={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+              >
+                <span className="truncate text-muted-foreground">
+                  Limpiar selección
+                </span>
+              </CommandItem>
+            ) : null}
+
             {items.map((it) => (
               <CommandItem
                 key={it.value}

@@ -13,6 +13,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { useWord } from "@/context/AppContext"
+import { Eye, EyeOff } from "lucide-react"
 
 type LoginFormProps = React.ComponentPropsWithoutRef<"div">
 
@@ -22,6 +23,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
   const [dni, setDni] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -37,7 +39,11 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
         }
       )
 
-      const data: { user?: any; message?: string } = await res.json()
+      const data: {
+        user?: any
+        message?: string
+        mustChangePassword?: boolean
+      } = await res.json()
 
       if (!res.ok) {
         alert(data.message ?? "Error de login")
@@ -49,15 +55,19 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
         setUser(data.user)
       }
 
-      router.push("/dashboard")
+      // ✅ si la contraseña es temporal / forzada -> obligar cambio
+      if (data.mustChangePassword) {
+        router.replace("/dashboard/settings/change-password?forced=1")
+        return
+      }
+
+      router.replace("/dashboard")
     } catch (error) {
       console.error("Error en login:", error)
       alert("Error de conexión con el servidor")
     }
   }
 
-  // ✅ Como el token es httpOnly, NO se puede leer con js-cookie.
-  // ✅ Validamos sesión consultando al backend.
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -66,12 +76,26 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           { credentials: "include" }
         )
 
-        if (res.ok) router.push("/dashboard")
+        if (!res.ok) return
+
+        const data: { user?: any } = await res.json().catch(() => ({}))
+
+        if (data.user) {
+          localStorage.setItem("user_data", JSON.stringify(data.user))
+          setUser(data.user)
+        }
+
+        if (data.user?.mustChangePassword) {
+          router.replace("/change-password?forced=1")
+          return
+        }
+
+        router.replace("/dashboard")
       } catch {}
     }
 
     checkSession()
-  }, [router])
+  }, [router, setUser])
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -107,13 +131,30 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+
+                {/* ✅ Password con ojo */}
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </Field>
 
               <Field>

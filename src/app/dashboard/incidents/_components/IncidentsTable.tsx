@@ -9,11 +9,26 @@ type Props = {
 };
 
 export default function IncidentsTable({ loading, items, onOpen }: Props) {
+  // Función interna para formatear el número (Ej: 1 -> #001)
+  const formatFolio = (num?: number) => {
+    if (num == null) return "—";
+    return `#${String(num).padStart(3, "0")}`;
+  };
+
+  // Formatea el tipo a texto legible
+  const formatType = (type: string) =>
+    type
+      .toLowerCase()
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
   return (
     <div className="overflow-x-auto rounded-xl border">
       <table className="w-full text-sm">
         <thead className="bg-muted/40">
           <tr className="text-left">
+            <th className="p-3">Folio</th>
             <th className="p-3">Estado</th>
             <th className="p-3">Tipo</th>
             <th className="p-3">Título</th>
@@ -25,27 +40,59 @@ export default function IncidentsTable({ loading, items, onOpen }: Props) {
         <tbody>
           {items.map((it) => (
             <tr key={it.id} className="border-t hover:bg-muted/30">
-              <td className="p-3">{statusBadge(it.status)}</td>
-              <td className="p-3">{it.type}</td>
-              <td className="p-3">
-                {it.title ?? <span className="text-muted-foreground">—</span>}
+              {/* Folio */}
+              <td className="p-3 font-mono font-medium text-primary">
+                {formatFolio(it.number)}
               </td>
+
+              {/* Estado (OPEN | IN_PROGRESS | CLOSED) */}
               <td className="p-3">
-                {it.reportedBy?.username ?? (
+                {statusBadge(it.status)}
+              </td>
+
+              {/* Tipo */}
+              <td className="p-3">
+                {formatType(it.type)}
+              </td>
+
+              {/* Título */}
+              <td className="p-3">
+                {it.title ? (
+                  it.title
+                ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
               </td>
+
+              {/* Reportado por */}
               <td className="p-3">
-                <Button variant="ghost" onClick={() => onOpen(it.id)}>
+                {it.reportedBy?.employee ? (
+                  `${it.reportedBy.employee.nombres} ${it.reportedBy.employee.apellidos ?? ""}`.trim()
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </td>
+
+              {/* Acción */}
+              <td className="p-3 text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onOpen(it.id)}
+                >
                   Ver
                 </Button>
               </td>
             </tr>
           ))}
 
+          {/* Empty state */}
           {!loading && items.length === 0 && (
             <tr>
-              <td className="p-6 text-center text-muted-foreground" colSpan={5}>
+              <td
+                className="p-6 text-center text-muted-foreground"
+                colSpan={6}
+              >
                 No hay incidencias para mostrar.
               </td>
             </tr>

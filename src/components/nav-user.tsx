@@ -157,7 +157,7 @@ export function NavUser({ user }: NavUserProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
-              onClick={() => router.push("/dashboard/perfil")}
+              onClick={() => router.push("/dashboard/me")}
               className="gap-2"
             >
               <BadgeCheck className="size-4" />

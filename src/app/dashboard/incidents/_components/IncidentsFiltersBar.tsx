@@ -1,3 +1,5 @@
+import * as React from "react";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +25,9 @@ type Props = {
   countLabel: string;
 
   onRefresh: () => void;
+
+  // ✅ permite inyectar botones/acciones (ej: "Nueva incidencia")
+  rightSlot?: React.ReactNode;
 };
 
 export default function IncidentsFiltersBar({
@@ -33,11 +38,14 @@ export default function IncidentsFiltersBar({
   loading,
   countLabel,
   onRefresh,
+  rightSlot,
 }: Props) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="sm:col-span-2">
+      {/* Buscador + Estado + Acciones */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
+        {/* Buscador */}
+        <div className="lg:col-span-7">
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -45,26 +53,41 @@ export default function IncidentsFiltersBar({
           />
         </div>
 
-        <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas</SelectItem>
-            <SelectItem value="OPEN">Pendientes</SelectItem>
-            <SelectItem value="CORRECTIVE_SET">En correctivo</SelectItem>
-            <SelectItem value="CLOSED">Cerradas</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Filtro por estado */}
+        <div className="lg:col-span-2">
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v as IncidentStatus | "ALL")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas</SelectItem>
+              <SelectItem value="OPEN">Pendientes</SelectItem>
+              <SelectItem value="IN_PROGRESS">En proceso</SelectItem>
+              <SelectItem value="CLOSED">Cerradas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Acciones derecha */}
+        <div className="lg:col-span-3 flex items-center justify-end gap-2">
+          {rightSlot}
+          <Button variant="outline" onClick={onRefresh} disabled={loading}>
+            Refrescar
+          </Button>
+        </div>
       </div>
 
+      {/* Contador */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {loading ? "Cargando..." : countLabel}
         </p>
-        <Button variant="outline" onClick={onRefresh} disabled={loading}>
-          Refrescar
-        </Button>
+        <span className="text-xs text-muted-foreground hidden sm:inline">
+          {/* espacio para futuros hints */}
+        </span>
       </div>
 
       <Separator />

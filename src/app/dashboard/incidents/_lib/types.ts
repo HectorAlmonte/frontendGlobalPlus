@@ -6,7 +6,7 @@
 
 export type IncidentStatus =
   | "OPEN"
-  | "CORRECTIVE_SET"
+  | "IN_PROGRESS"
   | "CLOSED";
 
 export type IncidentFileStage =
@@ -38,15 +38,24 @@ export type IncidentListItem = {
   id: string;
 
   title: string | null;
-  type: IncidentType; // ✅ ya no string
+  type: IncidentType;
   detail: string;
-
+  number: number;
   status: IncidentStatus;
   reportedAt: string;
+
+  // ✅ NUEVO (fallback UI)
+  areaNameSnapshot?: string | null;
+  observedLabelSnapshot?: string | null;
+  observedKind?: ObservedKind;
 
   reportedBy?: {
     id: string;
     username: string;
+    employee: {
+      nombres: string;
+      apellidos: string;
+    };
   };
 
   area?: {
@@ -124,6 +133,9 @@ export type IncidentDetail = IncidentListItem & {
       username: string;
     } | null;
   } | null;
+
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 };
 
 /**
@@ -134,14 +146,17 @@ export type IncidentDetail = IncidentListItem & {
 
 export type CreateIncidentInput = {
   title: string;
-  type: IncidentType; // ✅ CORRECTO
+  type: IncidentType;
   locationLabel: string;
   detail: string;
+
+  // ✅ NUEVO
+  areaId: string;
 
   observedKind: ObservedKind;
   observedUserId: string;
   observedAreaId: string;
 
-  causes: string; // coma-separado en UI
+  causes: string;
   files: File[];
 };
