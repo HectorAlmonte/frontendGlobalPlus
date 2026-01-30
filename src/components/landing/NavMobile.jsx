@@ -28,7 +28,7 @@ const NavMobile = () => {
 
   const goSystem = () => {
     setIsOpen(false)
-    router.push("/work-in-progress")
+    router.push("/login")
   }
 
   return (
