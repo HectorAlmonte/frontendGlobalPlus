@@ -25,7 +25,7 @@ const Header = () => {
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  const handleClick = () => router.push("/work-in-progress")
+  const handleClick = () => router.push("/login")
 
   return (
     <header
