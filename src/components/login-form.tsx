@@ -29,6 +29,8 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
     e.preventDefault()
 
     try {
+      console.log("API_URL =", process.env.NEXT_PUBLIC_API_URL);
+      console.log(JSON.stringify({ dni: dni.trim(), password }))
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
         {

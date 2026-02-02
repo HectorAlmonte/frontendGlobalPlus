@@ -29,7 +29,7 @@ import {
 } from "./_lib/api";
 
 /** ===== Tipos mínimos para perfil ===== */
-type RoleKey = "ADMIN" | "SUPERVISOR" | "OPERADOR" | "SEGURIDAD" | string;
+type RoleKey = "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD" | string;
 
 type MeProfile = {
   user: {
@@ -218,7 +218,8 @@ export default function IncidentsPage() {
                     onOpenChange={setOpenCreate}
                     creating={creating}
                     onCreate={handleCreate}
-                    roleKey={roleKey} // ✅ ya no usa "user"
+                    roleKey={roleKey}
+                    profile={profile} // ✅ Agregar esta línea // ✅ ya no usa "user"
                   />
                 }
               />
@@ -278,6 +279,7 @@ export default function IncidentsPage() {
           await reloadDetail();
           await fetchList();
         }}
+        profile={profile}
       />
 
       <CloseIncidentModal
@@ -286,6 +288,7 @@ export default function IncidentsPage() {
         incidentId={closeIncidentId}
         loading={closing}
         onSubmit={handleCloseSubmit}
+        profile={profile}
       />
     </div>
   );

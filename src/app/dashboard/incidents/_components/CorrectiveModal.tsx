@@ -28,8 +28,24 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { AlertTriangle } from "lucide-react";
 
 type IncidentPriority = "BAJA" | "MEDIA" | "ALTA";
+type RoleKey = "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD" | string;
+
+type MeProfile = {
+  user: {
+    id: string;
+    username: string;
+    role?: { key: RoleKey; name?: string | null } | null;
+  };
+  employee?: {
+    shift?: {
+      startTime: string;
+      endTime: string;
+    } | null;
+  } | null;
+};
 
 const schema = z.object({
   priority: z.enum(["BAJA", "MEDIA", "ALTA"]),
@@ -44,20 +60,14 @@ const schema = z.object({
 
 type FormValues = z.input<typeof schema>;
 
-// ✅ base del backend (4000)
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
 
-// ✅ helper para armar urls: http://localhost:4000 + /api/...
 function apiUrl(path: string) {
   const p = path.startsWith("/") ? path : `/${path}`;
-  if (!API_BASE) return p; // fallback (si no hay env)
+  if (!API_BASE) return p;
   return `${API_BASE}${p}`;
 }
 
-/**
- * ✅ Convierte "YYYY-MM-DD" a ISO en UTC SIN desfase de zona horaria.
- * Ej: "2026-01-29" -> "2026-01-29T00:00:00.000Z"
- */
 function dateInputToIsoUtc(dateStr?: string | null) {
   const s = String(dateStr || "").trim();
   if (!s) return null;
@@ -91,7 +101,6 @@ async function apiCreateCorrective(incidentId: string, payload: any) {
   return res.json();
 }
 
-// ✅ Tu backend lee stage desde req.query.stage
 async function apiUploadIncidentFiles(
   incidentId: string,
   files: File[],
@@ -120,12 +129,80 @@ async function apiUploadIncidentFiles(
   return res.json();
 }
 
+// ✅ Funciones de validación de horarios
+function getCurrentLocalTime() {
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  return { hour, minute };
+}
+
+function timeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function canPerformAction(
+  roleKey?: RoleKey,
+  profile?: MeProfile | null
+): {
+  allowed: boolean;
+  reason?: string;
+} {
+  if (!roleKey) {
+    return { allowed: false, reason: "No se pudo determinar tu rol" };
+  }
+
+  // ADMIN y SUPERVISOR siempre pueden
+  if (roleKey === "ADMIN" || roleKey === "SUPERVISOR") {
+    return { allowed: true };
+  }
+
+  // SEGURIDAD siempre puede
+  if (roleKey === "SEGURIDAD") {
+    return { allowed: true };
+  }
+
+  // TRABAJADOR: validar turno
+  if (roleKey === "TRABAJADOR") {
+    const shift = profile?.employee?.shift;
+
+    if (!shift?.startTime || !shift?.endTime) {
+      return {
+        allowed: false,
+        reason: "No tienes un turno asignado. Contacta a tu supervisor.",
+      };
+    }
+
+    const { hour, minute } = getCurrentLocalTime();
+    const currentMinutes = hour * 60 + minute;
+    const startMinutes = timeToMinutes(shift.startTime);
+    const endMinutes = timeToMinutes(shift.endTime);
+
+    if (currentMinutes < startMinutes || currentMinutes > endMinutes) {
+      return {
+        allowed: false,
+        reason: `Solo puedes realizar esta acción dentro de tu turno (${shift.startTime} - ${shift.endTime})`,
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: "Tu rol no tiene permiso para realizar esta acción",
+  };
+}
+
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   incidentId: string | null;
   onSaved?: () => void;
   preventCloseWhileSaving?: boolean;
+  profile: MeProfile | null; // ✅ NUEVO
+  roleKey?: RoleKey; // ✅ NUEVO
 };
 
 export default function CorrectiveModal({
@@ -134,10 +211,26 @@ export default function CorrectiveModal({
   incidentId,
   onSaved,
   preventCloseWhileSaving = true,
+  profile, // ✅ NUEVO
+  roleKey, // ✅ NUEVO
 }: Props) {
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
   const [evidenceFiles, setEvidenceFiles] = React.useState<File[]>([]);
+
+  // ✅ Validación de permisos
+  const validation = React.useMemo(
+    () => canPerformAction(roleKey, profile),
+    [roleKey, profile]
+  );
+
+  const allowed = validation.allowed;
+  const blockReason = validation.reason;
+
+  const currentTime = React.useMemo(() => {
+    const { hour, minute } = getCurrentLocalTime();
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -159,8 +252,16 @@ export default function CorrectiveModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // ✅ Si intenta abrir sin permiso, cerramos automáticamente
+  React.useEffect(() => {
+    if (open && !allowed) {
+      onOpenChange(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, allowed]);
+
   const handleSubmit = form.handleSubmit(async (values) => {
-    if (!incidentId) return;
+    if (!incidentId || !allowed) return;
 
     setSaving(true);
     setErr(null);
@@ -168,7 +269,6 @@ export default function CorrectiveModal({
     try {
       await apiCreateCorrective(incidentId, {
         priority: values.priority as IncidentPriority,
-        // ✅ evita desfase por timezone
         dueDate: dateInputToIsoUtc(values.dueDate || "") ?? null,
         detail: values.detail,
       });
@@ -198,11 +298,31 @@ export default function CorrectiveModal({
         <DialogHeader>
           <DialogTitle>Registrar correctivo</DialogTitle>
           <DialogDescription>
-            Registra la acción correctiva y una fecha tentativa. (Solo Supervisor / Admin)
+            Registra la acción correctiva y una fecha tentativa.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* ✅ Mensaje de bloqueo */}
+          {!allowed && blockReason ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 mt-0.5 text-amber-600 shrink-0" />
+                <div className="space-y-1.5">
+                  <div className="font-medium text-amber-900">
+                    No puedes registrar correctivos en este momento
+                  </div>
+                  <p className="text-amber-700">{blockReason}</p>
+                  {roleKey === "TRABAJADOR" && (
+                    <p className="text-xs text-amber-600">
+                      Hora actual: <b>{currentTime}</b>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {err && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {err}
@@ -216,7 +336,7 @@ export default function CorrectiveModal({
               onValueChange={(v) =>
                 form.setValue("priority", v as any, { shouldValidate: true })
               }
-              disabled={saving}
+              disabled={saving || !allowed}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona prioridad" />
@@ -245,7 +365,7 @@ export default function CorrectiveModal({
                   shouldValidate: true,
                 })
               }
-              disabled={saving}
+              disabled={saving || !allowed}
             />
             {form.formState.errors.dueDate?.message && (
               <p className="text-xs text-destructive">
@@ -265,7 +385,7 @@ export default function CorrectiveModal({
               onChange={(e) =>
                 form.setValue("detail", e.target.value, { shouldValidate: true })
               }
-              disabled={saving}
+              disabled={saving || !allowed}
             />
             {form.formState.errors.detail?.message && (
               <p className="text-xs text-destructive">
@@ -280,7 +400,7 @@ export default function CorrectiveModal({
               type="file"
               multiple
               accept="image/*,application/pdf"
-              disabled={saving}
+              disabled={saving || !allowed}
               onChange={(e) => {
                 const list = Array.from(e.target.files || []);
                 setEvidenceFiles(list);
@@ -307,7 +427,7 @@ export default function CorrectiveModal({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={saving || !incidentId}
+            disabled={saving || !incidentId || !allowed}
           >
             {saving ? "Guardando..." : "Guardar correctivo"}
           </Button>

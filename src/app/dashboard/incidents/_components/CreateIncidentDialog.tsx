@@ -31,12 +31,27 @@ import { AlertTriangle, X } from "lucide-react";
 
 type RoleKey = "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD" | string;
 
+type MeProfile = {
+  user: {
+    id: string;
+    username: string;
+    role?: { key: RoleKey; name?: string | null } | null;
+  };
+  employee?: {
+    shift?: {
+      startTime: string; // "08:00"
+      endTime: string;   // "17:00"
+    } | null;
+  } | null;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   creating: boolean;
   onCreate: (input: CreateIncidentInput) => Promise<void> | void;
   roleKey?: RoleKey;
+  profile: MeProfile | null; // ✅ NUEVO
 };
 
 const initialState: CreateIncidentInput = {
@@ -44,43 +59,94 @@ const initialState: CreateIncidentInput = {
   type: "HALLAZGO_ANORMAL",
   locationLabel: "",
   detail: "",
-
   areaId: "",
-
-  // ✅ trabajador (observado) ya NO obligatorio
   observedKind: "NONE",
   observedUserId: "",
   observedAreaId: "",
-
   causes: "",
   files: [],
 };
 
-/** Hora Perú (America/Lima) */
-function getLimaHourMinute() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Lima",
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-  }).formatToParts(new Date());
-
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+/**
+ * ✅ Obtiene hora local del navegador (asumimos zona horaria Perú)
+ * Como todos usan el sistema en Perú, esto es seguro y confiable
+ */
+function getCurrentLocalTime() {
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
   return { hour, minute };
 }
 
-function isWithinWorkerHours() {
-  const { hour, minute } = getLimaHourMinute();
-  const mins = hour * 60 + minute;
-  return mins >= 6 * 60 && mins < 18 * 60; // 06:00–18:00
+/**
+ * ✅ Convierte "HH:MM" a minutos desde medianoche
+ */
+function timeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
 }
 
-function canCreateIncident(roleKey?: RoleKey) {
-  if (!roleKey) return false;
-  if (roleKey === "ADMIN" || roleKey === "SUPERVISOR") return true;
-  if (roleKey === "TRABAJADOR") return isWithinWorkerHours();
-  return false;
+/**
+ * ✅ Validación de permisos para crear incidencias
+ */
+function canCreateIncident(
+  roleKey?: RoleKey,
+  profile?: MeProfile | null
+): {
+  allowed: boolean;
+  reason?: string;
+} {
+  // Si no hay roleKey, bloqueamos
+  if (!roleKey) {
+    return { allowed: false, reason: "No se pudo determinar tu rol" };
+  }
+
+  // ✅ ADMIN y SUPERVISOR: SIEMPRE pueden (24/7)
+  if (roleKey === "ADMIN" || roleKey === "SUPERVISOR") {
+    return { allowed: true };
+  }
+
+  // ✅ SEGURIDAD: puede siempre (si aplica en tu caso)
+  if (roleKey === "SEGURIDAD") {
+    return { allowed: true };
+  }
+
+  // ✅ TRABAJADOR: validar según su turno asignado
+  if (roleKey === "TRABAJADOR") {
+    const shift = profile?.employee?.shift;
+
+    // Si no tiene turno asignado
+    if (!shift?.startTime || !shift?.endTime) {
+      return {
+        allowed: false,
+        reason: "No tienes un turno asignado. Contacta a tu supervisor.",
+      };
+    }
+
+    // Obtener hora actual local
+    const { hour, minute } = getCurrentLocalTime();
+    const currentMinutes = hour * 60 + minute;
+
+    // Convertir turno a minutos
+    const startMinutes = timeToMinutes(shift.startTime);
+    const endMinutes = timeToMinutes(shift.endTime);
+
+    // Validar si está dentro del horario
+    if (currentMinutes < startMinutes || currentMinutes > endMinutes) {
+      return {
+        allowed: false,
+        reason: `Solo puedes registrar incidencias dentro de tu turno (${shift.startTime} - ${shift.endTime})`,
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  // ✅ Otros roles: bloqueados por defecto
+  return {
+    allowed: false,
+    reason: "Tu rol no tiene permiso para registrar incidencias",
+  };
 }
 
 export default function CreateIncidentDialog({
@@ -89,10 +155,24 @@ export default function CreateIncidentDialog({
   creating,
   onCreate,
   roleKey,
+  profile, // ✅ NUEVO
 }: Props) {
   const [form, setForm] = useState<CreateIncidentInput>(initialState);
 
-  const allowed = useMemo(() => canCreateIncident(roleKey), [roleKey]);
+  // ✅ Validación reactiva (se actualiza cuando cambia roleKey o profile)
+  const validation = useMemo(
+    () => canCreateIncident(roleKey, profile),
+    [roleKey, profile]
+  );
+
+  const allowed = validation.allowed;
+  const blockReason = validation.reason;
+
+  // ✅ Mostrar hora actual en el mensaje (para debugging/transparencia)
+  const currentTime = useMemo(() => {
+    const { hour, minute } = getCurrentLocalTime();
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }, []); // Solo calcular una vez al montar
 
   // Reset cuando se cierra
   useEffect(() => {
@@ -105,11 +185,8 @@ export default function CreateIncidentDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, allowed]);
 
-  // ✅ Trabajador observado ya NO es obligatorio para enviar
   const canSubmit =
-    Boolean(form.type) &&
-    form.detail.trim().length > 0 &&
-    Boolean(form.areaId);
+    Boolean(form.type) && form.detail.trim().length > 0 && Boolean(form.areaId);
 
   async function handleSubmit() {
     if (!canSubmit || !allowed) return;
@@ -126,8 +203,6 @@ export default function CreateIncidentDialog({
     await onCreate(payload);
   }
 
-  const showBlockedHint = roleKey === "TRABAJADOR" && !isWithinWorkerHours();
-
   const safeSearchAreas = async (q: string) => {
     if (creating || !allowed) return [];
     return apiSearchAreas(q);
@@ -142,12 +217,14 @@ export default function CreateIncidentDialog({
     setForm((p) => ({
       ...p,
       observedUserId: "",
-      observedKind: "NONE", // ✅ opcional (igual en submit se recalcula)
+      observedKind: "NONE",
       observedAreaId: "",
     }));
   }
 
-  const hasObservedWorker = Boolean(form.observedUserId && form.observedUserId.trim());
+  const hasObservedWorker = Boolean(
+    form.observedUserId && form.observedUserId.trim()
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -156,7 +233,12 @@ export default function CreateIncidentDialog({
           <Button>Nueva incidencia</Button>
         </DialogTrigger>
       ) : (
-        <Button variant="secondary" disabled className="gap-2">
+        <Button
+          variant="secondary"
+          disabled
+          className="gap-2"
+          title={blockReason}
+        >
           <AlertTriangle className="h-4 w-4" />
           Nueva incidencia
         </Button>
@@ -174,19 +256,19 @@ export default function CreateIncidentDialog({
               <Separator />
             </div>
 
-            {!allowed ? (
-              <div className="rounded-lg border p-4 text-sm">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="font-medium">No puedes registrar incidencias ahora</div>
-                    {showBlockedHint ? (
-                      <p className="text-muted-foreground">
-                        Trabajador: permitido solo de <b>06:00</b> a <b>18:00</b> (hora Perú).
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground">
-                        Tu rol no tiene permiso para registrar incidencias.
+            {/* ✅ Mensaje de bloqueo mejorado */}
+            {!allowed && blockReason ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 mt-0.5 text-amber-600 shrink-0" />
+                  <div className="space-y-1.5">
+                    <div className="font-medium text-amber-900">
+                      No puedes registrar incidencias en este momento
+                    </div>
+                    <p className="text-amber-700">{blockReason}</p>
+                    {roleKey === "TRABAJADOR" && (
+                      <p className="text-xs text-amber-600">
+                        Hora actual: <b>{currentTime}</b>
                       </p>
                     )}
                   </div>
@@ -220,7 +302,9 @@ export default function CreateIncidentDialog({
                   <SelectContent>
                     <SelectItem value="HALLAZGO_ANORMAL">Hallazgo anormal</SelectItem>
                     <SelectItem value="INCIDENTE">Incidente</SelectItem>
-                    <SelectItem value="CONDICION_SUB_ESTANDAR">Condición subestándar</SelectItem>
+                    <SelectItem value="CONDICION_SUB_ESTANDAR">
+                      Condición subestándar
+                    </SelectItem>
                     <SelectItem value="ACTO_SUB_ESTANDAR">Acto subestándar</SelectItem>
                   </SelectContent>
                 </Select>
@@ -255,12 +339,10 @@ export default function CreateIncidentDialog({
                 />
               </div>
 
-              {/* Trabajador */}
               <div className="space-y-2 sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
                   <Label>Trabajador (opcional)</Label>
 
-                  {/* ✅ Botón quitar */}
                   {hasObservedWorker ? (
                     <Button
                       type="button"
@@ -288,7 +370,8 @@ export default function CreateIncidentDialog({
 
                 {!hasObservedWorker ? (
                   <p className="text-xs text-muted-foreground">
-                    Si no seleccionas trabajador, la incidencia quedará como “Sin trabajador”.
+                    Si no seleccionas trabajador, la incidencia quedará como "Sin
+                    trabajador".
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
@@ -309,7 +392,6 @@ export default function CreateIncidentDialog({
               </div>
             </div>
 
-            {/* Evidencias */}
             <div className="space-y-2">
               <Label>Evidencias (archivo o foto)</Label>
               <Input
@@ -334,7 +416,6 @@ export default function CreateIncidentDialog({
               )}
             </div>
 
-            {/* Causas */}
             <div className="space-y-2">
               <Label>Posibles causas (opcional)</Label>
               <Input
@@ -357,10 +438,7 @@ export default function CreateIncidentDialog({
                 Cancelar
               </Button>
 
-              <Button
-                onClick={handleSubmit}
-                disabled={creating || !canSubmit || !allowed}
-              >
+              <Button onClick={handleSubmit} disabled={creating || !canSubmit || !allowed}>
                 {creating ? "Creando..." : "Crear"}
               </Button>
             </div>
