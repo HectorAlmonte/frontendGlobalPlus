@@ -25,7 +25,7 @@ export default function Page() {
             {/* <SectionCards />
             <ChartRadialStacked /> */}
             <MyProfilePage/>
-            <FormsList />
+            {/* <FormsList /> */}
           </div>
         </div>
       </div>
