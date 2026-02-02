@@ -69,6 +69,11 @@ type MeProfile = {
     email?: string;
     cargo?: string;
     status?: "ACTIVO" | "INACTIVO";
+    // ✅ AGREGA ESTO PARA QUE SEA COMPATIBLE CON EL DIALOG
+    shift?: {
+      startTime: string;
+      endTime: string;
+    } | null;
   } | null;
   incidents: IncidentListItem[];
 };
@@ -386,6 +391,7 @@ export default function MyProfilePage() {
                     creating={creating}
                     onCreate={handleCreate}
                     roleKey={roleKey}
+                    profile={data}
                   />
                 </div>
               </div>
