@@ -33,13 +33,17 @@ const formatType = (type: string) =>
 
 /* ── Component ── */
 type Props = {
-  refreshKey: number;
-  period: IncidentPeriod;
-  onCreateClick: () => void;
+  items?: IncidentListItem[]; 
+  loading?: boolean;
   onOpen: (id: string) => void;
+  refreshKey?: number;
+  period?: IncidentPeriod;
+  onCreateClick?: () => void;
 };
 
 export default function IncidentsTable({
+  items,        // 👈 Agrégalo aquí
+  loading: loadingProp, // 👈 Agrégalo aquí (le cambio el nombre para no chocar con el estado interno)
   refreshKey,
   period,
   onCreateClick,
