@@ -1,5 +1,5 @@
 // incidents/_lib/api.ts
-import { CreateIncidentInput, IncidentDetail, IncidentListItem } from "./types";
+import { CreateIncidentInput, IncidentDetail, IncidentListItem, IncidentPeriod, IncidentStats, IncidentStatus } from "./types";
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000";
@@ -12,12 +12,27 @@ type Option = { value: string; label: string };
  * =========================
  */
 
-export async function apiListIncidents(): Promise<IncidentListItem[]> {
+export async function apiListIncidents(params?: {
+  q?: string;
+  status?: IncidentStatus;
+  period?: IncidentPeriod;
+}): Promise<IncidentListItem[]> {
   const url = new URL(`${API_BASE}/api/incidents`);
+  if (params?.q) url.searchParams.set("q", params.q);
+  if (params?.status) url.searchParams.set("status", params.status);
+  if (params?.period && params.period !== "all") url.searchParams.set("period", params.period);
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Error listando incidencias");
   const data = await res.json();
   return Array.isArray(data) ? data : [];
+}
+
+export async function apiGetIncidentStats(period?: IncidentPeriod): Promise<IncidentStats> {
+  const url = new URL(`${API_BASE}/api/incidents/stats`);
+  if (period && period !== "all") url.searchParams.set("period", period);
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) throw new Error("Error cargando estadísticas");
+  return await res.json();
 }
 
 export async function apiGetIncidentDetail(id: string): Promise<IncidentDetail> {

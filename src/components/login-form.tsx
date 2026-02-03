@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,7 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { useWord } from "@/context/AppContext"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react"
 
 type LoginFormProps = React.ComponentPropsWithoutRef<"div">
 
@@ -24,13 +25,14 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
   const [dni, setDni] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (submitting) return
 
     try {
-      console.log("API_URL =", process.env.NEXT_PUBLIC_API_URL);
-      console.log(JSON.stringify({ dni: dni.trim(), password }))
+      setSubmitting(true)
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
         {
@@ -57,7 +59,6 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
         setUser(data.user)
       }
 
-      // ✅ si la contraseña es temporal / forzada -> obligar cambio
       if (data.mustChangePassword) {
         router.replace("/dashboard/settings/change-password?forced=1")
         return
@@ -66,7 +67,9 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
       router.replace("/dashboard")
     } catch (error) {
       console.error("Error en login:", error)
-      alert("Error de conexión con el servidor")
+      alert("Error de conexion con el servidor")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -101,87 +104,141 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden p-0">
+      <Card className="overflow-hidden border-0 shadow-xl">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8" onSubmit={handleLogin}>
-            <FieldGroup>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">Sistema de gestión</h1>
-                <p className="text-muted-foreground text-balance">
-                  Ingrese sus credenciales de acceso para continuar.
-                </p>
-              </div>
-
-              <Field>
-                <FieldLabel htmlFor="dni">DNI</FieldLabel>
-                <Input
-                  id="dni"
-                  placeholder="12345678"
-                  required
-                  value={dni}
-                  onChange={(e) => setDni(e.target.value)}
-                />
-              </Field>
-
-              <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-2 hover:underline"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </a>
+          {/* Left: Form */}
+          <div className="flex flex-col justify-center p-8 md:p-10 lg:p-12">
+            <form onSubmit={handleLogin}>
+              <FieldGroup>
+                {/* Branding */}
+                <div className="flex flex-col items-center gap-4 text-center mb-2">
+                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Image
+                      src="/logo/logo.png"
+                      alt="Global Plus"
+                      width={32}
+                      height={32}
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                      Global Plus
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Ingrese sus credenciales para acceder al sistema
+                    </p>
+                  </div>
                 </div>
 
-                {/* ✅ Password con ojo */}
-                <div className="relative">
+                {/* DNI */}
+                <Field>
+                  <FieldLabel htmlFor="dni" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    DNI
+                  </FieldLabel>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
+                    id="dni"
+                    placeholder="12345678"
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pr-10"
+                    value={dni}
+                    onChange={(e) => setDni(e.target.value)}
+                    className="h-11"
+                    disabled={submitting}
                   />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                </Field>
+
+                {/* Password */}
+                <Field>
+                  <div className="flex items-center">
+                    <FieldLabel htmlFor="password" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Contrasena
+                    </FieldLabel>
+                    <a
+                      href="#"
+                      className="ml-auto text-xs text-muted-foreground underline-offset-2 hover:underline hover:text-foreground transition-colors"
+                    >
+                      Olvidaste tu contrasena?
+                    </a>
+                  </div>
+
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-11 pr-10"
+                      disabled={submitting}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </Field>
+
+                {/* Submit */}
+                <Field>
+                  <Button type="submit" className="h-11 w-full font-semibold" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Ingresando...
+                      </>
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      "Ingresar"
                     )}
-                  </button>
-                </div>
-              </Field>
+                  </Button>
+                </Field>
 
-              <Field>
-                <Button type="submit">Login</Button>
-              </Field>
+                <FieldDescription className="text-center text-xs">
+                  No tiene una cuenta?{" "}
+                  <a href="#" className="font-medium text-primary hover:underline">
+                    Contactanos
+                  </a>
+                </FieldDescription>
+              </FieldGroup>
+            </form>
+          </div>
 
-              <FieldDescription className="text-center">
-                ¿No tiene una cuenta? <a href="#">Contáctanos</a>
-              </FieldDescription>
-            </FieldGroup>
-          </form>
+          {/* Right: Visual panel */}
+          <div className="relative hidden md:block bg-gradient-to-br from-primary/90 to-primary overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/logo2.jpg')] bg-cover bg-center opacity-20 mix-blend-overlay" />
+            <div className="relative flex h-full flex-col items-center justify-center p-10 text-white">
+              <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-6">
+                <ShieldCheck className="h-8 w-8" />
+              </div>
+              <h2 className="text-2xl font-bold text-center">
+                Sistema de Gestion
+              </h2>
+              <p className="mt-3 text-center text-sm text-white/80 max-w-[280px] leading-relaxed">
+                Plataforma integral para la gestion de incidencias, tareas, inventarios y personal.
+              </p>
 
-          <div className="bg-muted relative hidden md:block">
-            <img
-              src="/logo2.jpg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
+              {/* Decorative dots */}
+              <div className="absolute bottom-8 flex gap-1.5">
+                <div className="h-1.5 w-8 rounded-full bg-white/40" />
+                <div className="h-1.5 w-1.5 rounded-full bg-white/25" />
+                <div className="h-1.5 w-1.5 rounded-full bg-white/25" />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <FieldDescription className="px-6 text-center">
-        Sistema de gestión de inventarios - creado por Hector Almonte 2025
-      </FieldDescription>
+      <p className="text-center text-xs text-muted-foreground">
+        Global Plus &middot; Sistema de gestion &middot; {new Date().getFullYear()}
+      </p>
     </div>
   )
 }

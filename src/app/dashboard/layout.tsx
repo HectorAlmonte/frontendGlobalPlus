@@ -28,9 +28,9 @@ export default function Page({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center justify-between flex-1">
-            <div className="flex items-center gap-2 px-4">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+          <div className="flex items-center justify-between flex-1 px-4">
+            <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
               <Separator
                 orientation="vertical"
@@ -39,19 +39,19 @@ export default function Page({ children }: { children: React.ReactNode }) {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="#">
-                      Sistema de gestion
+                    <BreadcrumbLink href="/dashboard" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      Global Plus
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>{word}</BreadcrumbPage>
+                    <BreadcrumbPage className="text-xs font-semibold">{word}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
-            <div className="flex justify-center p-4">
-                <ModeToggle />
+            <div className="flex items-center gap-2">
+              <ModeToggle />
             </div>
           </div>
         </header>

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ClipboardPen,
   ClipboardList,
@@ -17,20 +19,25 @@ import {
   BarChart3,
   CircleHelp,
   AlertTriangle,
-  Loader2,
+  LayoutDashboard,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useWord } from "@/context/AppContext";
 
@@ -65,14 +72,11 @@ type NavSectionDTO = {
   items: NavItemDTO[];
 };
 
-const data = {
-  projects: [{ name: "Menu principal", url: "/dashboard", icon: ChartBar }],
-};
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const API = process.env.NEXT_PUBLIC_API_URL;
   const { user, loadingUser } = useWord();
   const { state } = useSidebar();
+  const pathname = usePathname();
 
   const isCollapsed = state === "collapsed";
 
@@ -80,7 +84,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [loadingNav, setLoadingNav] = React.useState(true);
   const [navError, setNavError] = React.useState<string | null>(null);
 
-  // ✅ para reintentar 1 vez si hay "cold start"
   const retryRef = React.useRef(0);
 
   const resolveIcon = (iconName?: string | null) => {
@@ -106,8 +109,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     const controller = new AbortController();
-
-    // ✅ Timeout más alto para evitar que la primera llamada falle
     const timeout = setTimeout(() => controller.abort(), 25000);
 
     const run = async () => {
@@ -128,7 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         if (sections.length === 0) {
           setNav([]);
-          setNavError("No hay items asignados a tu rol aún.");
+          setNavError("No hay items asignados a tu rol aun.");
           return;
         }
 
@@ -157,26 +158,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
 
         setNav(nonEmpty);
-        retryRef.current = 0; // ✅ resetea retry si cargó bien
+        retryRef.current = 0;
       } catch (e: any) {
-        // ✅ Si es AbortError, reintenta 1 vez (cold start típico)
         if (e?.name === "AbortError") {
           if (retryRef.current < 1) {
             retryRef.current += 1;
-            // no asustamos al usuario con rojo aún, mostramos "reintentando"
             setNavError(null);
             setLoadingNav(true);
 
             clearTimeout(timeout);
             controller.abort();
 
-            // re-lanza efecto con un reload "suave"
-            // (simplemente forzamos recarga con un setTimeout y nueva petición)
             setTimeout(() => {
-              // OJO: no podemos reutilizar controller abortado, así que:
-              // recargamos la página de forma suave (opcional)
-              // mejor: usar window.location.reload() NO.
-              // solución: hacemos una segunda fetch SIN abort controller.
               fetch(`${API}/api/navigation/sidebar`, { credentials: "include" })
                 .then(async (r) => {
                   const b = await r.json().catch(() => null);
@@ -212,7 +205,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 })
                 .catch((err2) => {
                   setNav([]);
-                  setNavError(err2?.message || "Error cargando navegación");
+                  setNavError(err2?.message || "Error cargando navegacion");
                 })
                 .finally(() => setLoadingNav(false));
             }, 600);
@@ -221,12 +214,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           }
 
           setNav([]);
-          setNavError("Demoró demasiado cargando menú. Intenta F5.");
+          setNavError("Demoro demasiado cargando menu. Intenta F5.");
           return;
         }
 
         setNav([]);
-        setNavError(e?.message || "Error cargando navegación");
+        setNavError(e?.message || "Error cargando navegacion");
       } finally {
         clearTimeout(timeout);
         setLoadingNav(false);
@@ -243,83 +236,97 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   if (loadingUser) return null;
 
+  const isDashboardHome = pathname === "/dashboard";
+
   return (
     <Sidebar
       collapsible="icon"
-      className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
+      className="border-r border-sidebar-border"
       {...props}
     >
-      <SidebarHeader className="px-2 pt-2">
+      {/* ── Header: Logo ── */}
+      <SidebarHeader className="px-3 py-4">
         {isCollapsed ? (
           <div className="flex items-center justify-center">
-            <div className="h-11 w-11 rounded-xl border bg-card shadow-sm flex items-center justify-center">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
               <Image
                 src="/logo/logo.png"
                 alt="Global Plus"
-                width={28}
-                height={28}
+                width={22}
+                height={22}
                 className="object-contain"
                 priority
               />
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border bg-card text-card-foreground shadow-sm px-3 py-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg border bg-background p-1 shadow-sm flex items-center justify-center">
-                <Image
-                  src="/logo/logo.png"
-                  alt="Global Plus"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                  priority
-                />
+          <div className="flex items-center gap-3 px-1">
+            <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Image
+                src="/logo/logo.png"
+                alt="Global Plus"
+                width={22}
+                height={22}
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-sm font-bold tracking-tight">
+                Global Plus
               </div>
-
-              <div className="min-w-0 leading-tight">
-                <div className="truncate text-sm font-semibold tracking-tight">
-                  Global Plus
-                </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  Sistema de gestión
-                </div>
+              <div className="truncate text-[11px] text-muted-foreground">
+                Sistema de gestion
               </div>
             </div>
           </div>
         )}
-
-        <div className="mt-3 border-t border-border" />
       </SidebarHeader>
 
-      <SidebarContent className="px-1">
-        <NavProjects projects={data.projects} />
+      {/* ── Content ── */}
+      <SidebarContent className="px-2">
+        {/* Dashboard home link */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            General
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Dashboard"
+                data-active={isDashboardHome}
+              >
+                <Link href="/dashboard">
+                  <LayoutDashboard className="size-4" />
+                  <span className="font-medium">Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
 
-        <div className="my-2 border-t border-border/70" />
-
+        {/* Dynamic nav sections */}
         {loadingNav ? (
-          isCollapsed ? (
-            <div
-              className="flex items-center justify-center py-2 text-muted-foreground"
-              title="Cargando menú…"
-            >
-              <Loader2 className="size-4 animate-spin" />
-            </div>
-          ) : (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              Cargando menú…
-            </div>
-          )
+          <div className="space-y-4 px-3 py-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-8 w-full rounded-md" />
+                <Skeleton className="h-8 w-full rounded-md" />
+              </div>
+            ))}
+          </div>
         ) : navError ? (
           isCollapsed ? (
             <div
-              className="flex items-center justify-center py-2 text-destructive"
+              className="flex items-center justify-center py-3 text-destructive"
               title={navError}
             >
               <AlertTriangle className="size-4" />
             </div>
           ) : (
-            <div className="mx-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div className="mx-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-xs text-destructive leading-relaxed">
               {navError}
             </div>
           )
@@ -328,7 +335,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/70">
+      {/* ── Footer: User ── */}
+      <SidebarFooter className="border-t border-sidebar-border/50 px-2 py-2">
         <NavUser user={user} />
       </SidebarFooter>
 
@@ -336,4 +344,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   );
 }
- 

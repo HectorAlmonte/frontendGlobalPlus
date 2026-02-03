@@ -140,6 +140,23 @@ export type IncidentDetail = IncidentListItem & {
 
 /**
  * =========================
+ * KPI / PERIOD
+ * =========================
+ */
+
+export type IncidentPeriod = "7d" | "15d" | "1m" | "1y" | "all";
+
+export type IncidentStats = {
+  total: number;
+  byStatus: Record<IncidentStatus, number>;
+  byPriority: { BAJA: number; MEDIA: number; ALTA: number };
+  overdue: number;
+  resolutionRate: number;
+  avgCloseDays: number;
+};
+
+/**
+ * =========================
  * CREATE (FORM)
  * =========================
  */
