@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import {
   Table,
@@ -26,17 +28,23 @@ import {
   ShieldCheck,
   Search,
   Loader2,
+  TrendingUp,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Building2,
+  Phone,
+  MapPin,
+  Calendar,
 } from "lucide-react";
 
-// ✅ REUSA el mismo dialog del módulo incidencias
 import CreateIncidentDialog from "../incidents/_components/CreateIncidentDialog";
-
-// ✅ REUSA tipos y API del módulo incidencias
 import type { CreateIncidentInput } from "../incidents/_lib/types";
 import { apiCreateIncident } from "../incidents/_lib/api";
 
 /* =========================
-   TYPES (alineados a tu backend)
+   TYPES
 ========================= */
 
 type IncidentStatus = "OPEN" | "IN_PROGRESS" | "CLOSED" | "CANCELLED";
@@ -69,7 +77,7 @@ type MeProfile = {
     email?: string;
     cargo?: string;
     status?: "ACTIVO" | "INACTIVO";
-    // ✅ AGREGA ESTO PARA QUE SEA COMPATIBLE CON EL DIALOG
+        // ✅ AGREGA ESTO PARA QUE SEA COMPATIBLE CON EL DIALOG
     shift?: {
       startTime: string;
       endTime: string;
@@ -83,32 +91,39 @@ type MeProfile = {
 ========================= */
 
 function statusBadge(status: IncidentStatus) {
-  switch (status) {
-    case "OPEN":
-      return (
-        <Badge className="bg-blue-600 text-white hover:bg-blue-600">
-          Pendiente
-        </Badge>
-      );
+  const variants = {
+    OPEN: {
+      icon: AlertCircle,
+      label: "Pendiente",
+      className: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800",
+    },
+    IN_PROGRESS: {
+      icon: Clock,
+      label: "En proceso",
+      className: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800",
+    },
+    CLOSED: {
+      icon: CheckCircle2,
+      label: "Cerrada",
+      className: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800",
+    },
+    CANCELLED: {
+      icon: AlertCircle,
+      label: "Anulada",
+      className: "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
+    },
+  };
 
-    case "IN_PROGRESS":
-      return (
-        <Badge className="bg-blue-600 text-white hover:bg-blue-600">
-          En proceso
-        </Badge>
-      );
+  const config = variants[status] || variants.OPEN;
+  const Icon = config.icon;
 
-    case "CLOSED":
-      return <Badge>Cerrada</Badge>;
-
-    case "CANCELLED":
-      return <Badge variant="outline">Anulada</Badge>;
-
-    default:
-      return <Badge variant="outline">{status}</Badge>;
-  }
+  return (
+    <Badge variant="outline" className={`gap-1 font-medium ${config.className}`}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </Badge>
+  );
 }
-
 
 function fmtDate(d: string) {
   const dt = new Date(d);
@@ -120,6 +135,15 @@ function fmtDate(d: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 /* =========================
@@ -150,8 +174,6 @@ export default function MyProfilePage() {
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<MeProfile | null>(null);
   const [q, setQ] = React.useState("");
-
-  // ✅ estados para el dialog de creación (igual que en IncidentsPage)
   const [openCreate, setOpenCreate] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
 
@@ -191,7 +213,6 @@ export default function MyProfilePage() {
     try {
       await apiCreateIncident(input);
       setOpenCreate(false);
-      // ✅ refresca perfil para actualizar stats + tabla
       await fetchProfile();
     } catch (e) {
       console.error(e);
@@ -249,11 +270,11 @@ export default function MyProfilePage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="flex items-center gap-2 p-6 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Cargando perfil...
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center gap-3 p-8">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium">Cargando perfil...</span>
           </CardContent>
         </Card>
       </div>
@@ -262,12 +283,17 @@ export default function MyProfilePage() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card>
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <Card className="w-full max-w-md">
           <CardContent className="p-6">
-            <p className="font-medium">No se pudo cargar el perfil</p>
-            <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-            <Button className="mt-4" onClick={() => location.reload()}>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="ml-2">
+                <p className="font-medium">No se pudo cargar el perfil</p>
+                <p className="mt-1 text-sm">{error}</p>
+              </AlertDescription>
+            </Alert>
+            <Button className="mt-4 w-full" onClick={() => location.reload()}>
               Reintentar
             </Button>
           </CardContent>
@@ -278,10 +304,10 @@ export default function MyProfilePage() {
 
   if (!data) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6 text-muted-foreground">
-            Sin datos.
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Sin datos disponibles
           </CardContent>
         </Card>
       </div>
@@ -292,93 +318,179 @@ export default function MyProfilePage() {
   const emailLabel = data.user.email || data.employee?.email || null;
 
   return (
-    <div className="mx-auto w-full max-w-6xl p-4 md:p-6">
-      {/* HEADER */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-1">
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <UserIcon className="h-4 w-4" />
-            Mi perfil
-          </p>
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6 lg:p-8">
+      {/* HEADER CON AVATAR */}
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start">
+              {/* Avatar */}
+              <Avatar className="h-20 w-20 border-2 border-primary/10">
+                <AvatarImage src="" alt={fullName} />
+                <AvatarFallback className="bg-primary/5 text-lg font-semibold text-primary">
+                  {getInitials(fullName)}
+                </AvatarFallback>
+              </Avatar>
 
-          <h1 className="text-2xl font-semibold tracking-tight">{fullName}</h1>
+              {/* Info principal */}
+              <div className="space-y-3">
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight lg:text-3xl">
+                    {fullName}
+                  </h1>
+                  <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                    <UserIcon className="h-4 w-4" />
+                    Perfil de usuario
+                  </p>
+                </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <IdCard className="h-4 w-4" />
-              Usuario/DNI:{" "}
-              <span className="font-medium text-foreground">
-                {data.user.username}
-              </span>
-            </span>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-1.5">
+                    <IdCard className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {data.user.username}
+                    </span>
+                  </div>
 
-            <span className="inline-flex items-center gap-1">
-              <ShieldCheck className="h-4 w-4" />
-              Rol:{" "}
-              <span className="font-medium text-foreground">{roleLabel}</span>
-            </span>
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-1.5">
+                    <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{roleLabel}</span>
+                  </div>
 
-            {emailLabel ? (
-              <span className="inline-flex items-center gap-1">
-                <Mail className="h-4 w-4" />
-                <span className="font-medium text-foreground">{emailLabel}</span>
-              </span>
-            ) : null}
+                  {data.employee?.status && (
+                    <Badge
+                      variant={
+                        data.employee.status === "ACTIVO" ? "default" : "secondary"
+                      }
+                      className="gap-1"
+                    >
+                      <Activity className="h-3 w-3" />
+                      {data.employee.status === "ACTIVO" ? "Activo" : "Inactivo"}
+                    </Badge>
+                  )}
+                </div>
+
+                {emailLabel && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <a
+                      href={`mailto:${emailLabel}`}
+                      className="hover:text-foreground hover:underline"
+                    >
+                      {emailLabel}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <Separator className="my-6" />
-
+      {/* TABS */}
       <Tabs defaultValue="incidencias" className="w-full">
-        <TabsList>
-          <TabsTrigger value="incidencias">Incidencias</TabsTrigger>
-          <TabsTrigger value="datos">Datos personales</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto">
+          <TabsTrigger value="incidencias" className="gap-2">
+            <Activity className="h-4 w-4" />
+            Incidencias
+          </TabsTrigger>
+          <TabsTrigger value="datos" className="gap-2">
+            <UserIcon className="h-4 w-4" />
+            Datos personales
+          </TabsTrigger>
         </TabsList>
 
-        {/* INCIDENCIAS */}
-        <TabsContent value="incidencias" className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-sm text-muted-foreground">Total</div>
-                <div className="text-2xl font-semibold">{stats.total}</div>
+        {/* TAB: INCIDENCIAS */}
+        <TabsContent value="incidencias" className="mt-6 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total
+                    </p>
+                    <p className="text-3xl font-bold">{stats.total}</p>
+                  </div>
+                  <div className="rounded-lg bg-primary/10 p-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-sm text-muted-foreground">Abiertas</div>
-                <div className="text-2xl font-semibold">{stats.open}</div>
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Abiertas
+                    </p>
+                    <p className="text-3xl font-bold text-amber-600">
+                      {stats.open}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-950">
+                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-sm text-muted-foreground">En progreso</div>
-                <div className="text-2xl font-semibold">{stats.inProgress}</div>
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      En progreso
+                    </p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {stats.inProgress}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-950">
+                    <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-sm text-muted-foreground">Cerradas</div>
-                <div className="text-2xl font-semibold">{stats.closed}</div>
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Cerradas
+                    </p>
+                    <p className="text-3xl font-bold text-emerald-600">
+                      {stats.closed}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-950">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <CardTitle className="text-base">Mis incidencias</CardTitle>
+          {/* Tabla de incidencias */}
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <CardTitle>Mis incidencias</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Historial completo de reportes
+                  </p>
+                </div>
 
-                {/* ✅ mismo patrón que en IncidentsPage: buscador + botón */}
-                <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-                  <div className="relative w-full md:w-[360px]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="relative w-full sm:w-[320px]">
                     <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar por código, título, estado, área..."
+                      placeholder="Buscar incidencias..."
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
                       className="pl-9"
@@ -399,38 +511,63 @@ export default function MyProfilePage() {
 
             <CardContent>
               {incidentsFiltered.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  No hay incidencias para mostrar.
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-12">
+                  <Activity className="h-12 w-12 text-muted-foreground/50" />
+                  <p className="mt-4 text-sm font-medium text-muted-foreground">
+                    No hay incidencias para mostrar
+                  </p>
+                  {q && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setQ("")}
+                      className="mt-2"
+                    >
+                      Limpiar búsqueda
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Título</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Área</TableHead>
-                        <TableHead>Creado</TableHead>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="font-semibold">Código</TableHead>
+                        <TableHead className="font-semibold">Título</TableHead>
+                        <TableHead className="font-semibold">Estado</TableHead>
+                        <TableHead className="font-semibold">Área</TableHead>
+                        <TableHead className="font-semibold">Fecha</TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
                       {incidentsFiltered.map((it) => (
-                        <TableRow key={it.id}>
-                          <TableCell className="font-medium">
+                        <TableRow
+                          key={it.id}
+                          className="hover:bg-muted/20 transition-colors"
+                        >
+                          <TableCell className="font-mono text-sm font-medium">
                             {it.code || "—"}
                           </TableCell>
 
-                          <TableCell className="max-w-[360px] truncate">
-                            {it.title || "—"}
+                          <TableCell className="max-w-[400px]">
+                            <div className="truncate font-medium">
+                              {it.title || "—"}
+                            </div>
                           </TableCell>
 
                           <TableCell>{statusBadge(it.status)}</TableCell>
 
-                          <TableCell>{it.area || "—"}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Building2 className="h-4 w-4" />
+                              {it.area || "—"}
+                            </div>
+                          </TableCell>
 
-                          <TableCell>{fmtDate(it.createdAt)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {fmtDate(it.createdAt)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -441,52 +578,125 @@ export default function MyProfilePage() {
           </Card>
         </TabsContent>
 
-        {/* DATOS PERSONALES */}
-        <TabsContent value="datos" className="mt-4">
-          <Card>
+        {/* TAB: DATOS PERSONALES */}
+        <TabsContent value="datos" className="mt-6">
+          <Card className="border-none shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Datos personales</CardTitle>
+              <CardTitle>Información personal</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Datos del empleado y contacto
+              </p>
             </CardHeader>
 
-            <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-lg border p-4">
-                <div className="mb-2 text-sm font-medium">Nombre</div>
-                <p className="text-sm text-muted-foreground">{fullName}</p>
-              </div>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Información básica */}
+                <div className="space-y-4 rounded-lg border bg-muted/20 p-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <UserIcon className="h-5 w-5" />
+                    <h3 className="font-semibold">Identificación</h3>
+                  </div>
 
-              <div className="rounded-lg border p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                  <BriefcaseBusiness className="h-4 w-4" />
-                  Cargo / Estado
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Nombre completo
+                      </p>
+                      <p className="mt-1 text-sm font-medium">{fullName}</p>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        DNI
+                      </p>
+                      <p className="mt-1 font-mono text-sm font-medium">
+                        {data.employee?.dni || data.user.username || "—"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <p className="text-sm text-muted-foreground">
-                  Cargo:{" "}
-                  <span className="font-medium text-foreground">
-                    {data.employee?.cargo || "—"}
-                  </span>
-                </p>
+                {/* Información laboral */}
+                <div className="space-y-4 rounded-lg border bg-muted/20 p-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <BriefcaseBusiness className="h-5 w-5" />
+                    <h3 className="font-semibold">Información laboral</h3>
+                  </div>
 
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Estado:{" "}
-                  <span className="font-medium text-foreground">
-                    {data.employee?.status === "ACTIVO"
-                      ? "Activo"
-                      : data.employee?.status === "INACTIVO"
-                      ? "Inactivo"
-                      : "—"}
-                  </span>
-                </p>
-              </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Cargo
+                      </p>
+                      <p className="mt-1 text-sm font-medium">
+                        {data.employee?.cargo || "—"}
+                      </p>
+                    </div>
 
-              <div className="rounded-lg border p-4 md:col-span-2">
-                <div className="mb-2 text-sm font-medium">Contacto</div>
-                <p className="text-sm text-muted-foreground">
-                  Email:{" "}
-                  <span className="font-medium text-foreground">
-                    {emailLabel || "—"}
-                  </span>
-                </p>
+                    <Separator />
+
+                    <div>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Rol del sistema
+                      </p>
+                      <Badge variant="outline" className="mt-1 gap-1">
+                        <ShieldCheck className="h-3 w-3" />
+                        {roleLabel}
+                      </Badge>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Estado
+                      </p>
+                      {data.employee?.status && (
+                        <Badge
+                          variant={
+                            data.employee.status === "ACTIVO"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="mt-1 gap-1"
+                        >
+                          <Activity className="h-3 w-3" />
+                          {data.employee.status === "ACTIVO" ? "Activo" : "Inactivo"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contacto */}
+                <div className="space-y-4 rounded-lg border bg-muted/20 p-6 md:col-span-2">
+                  <div className="flex items-center gap-3 text-primary">
+                    <Mail className="h-5 w-5" />
+                    <h3 className="font-semibold">Contacto</h3>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Correo electrónico
+                      </p>
+                      {emailLabel ? (
+                        <a
+                          href={`mailto:${emailLabel}`}
+                          className="mt-1 block text-sm font-medium text-primary hover:underline"
+                        >
+                          {emailLabel}
+                        </a>
+                      ) : (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          No registrado
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
