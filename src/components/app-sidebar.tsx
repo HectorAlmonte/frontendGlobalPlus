@@ -20,6 +20,31 @@ import {
   CircleHelp,
   AlertTriangle,
   LayoutDashboard,
+  ListTodo,
+  Users,
+  FileText,
+  FolderOpen,
+  Briefcase,
+  Building,
+  MapPin,
+  Bell,
+  Lock,
+  Key,
+  Eye,
+  Wrench,
+  Cog,
+  Package,
+  Truck,
+  HardHat,
+  Layers,
+  BookOpen,
+  Clipboard,
+  PenLine,
+  FilePlus,
+  UserCheck,
+  UserCog,
+  UsersRound,
+  CircleDot,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -54,6 +79,33 @@ const iconMap: Record<string, any> = {
   Coffee,
   CalendarDays,
   BarChart3,
+  ListTodo,
+  Users,
+  FileText,
+  FolderOpen,
+  Briefcase,
+  Building,
+  MapPin,
+  Bell,
+  Lock,
+  Key,
+  Eye,
+  Wrench,
+  Cog,
+  Package,
+  Truck,
+  HardHat,
+  Layers,
+  BookOpen,
+  Clipboard,
+  PenLine,
+  FilePlus,
+  UserCheck,
+  UserCog,
+  UsersRound,
+  AlertTriangle,
+  LayoutDashboard,
+  CircleDot,
 };
 
 type NavItemDTO = {
@@ -75,7 +127,7 @@ type NavSectionDTO = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const API = process.env.NEXT_PUBLIC_API_URL;
   const { user, loadingUser } = useWord();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
 
   const isCollapsed = state === "collapsed";
@@ -88,7 +140,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const resolveIcon = (iconName?: string | null) => {
     if (!iconName) return undefined;
-    return iconMap[iconName] ?? CircleHelp;
+    return iconMap[iconName] ?? CircleDot;
   };
 
   React.useEffect(() => {
@@ -297,7 +349,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 tooltip="Dashboard"
                 data-active={isDashboardHome}
               >
-                <Link href="/dashboard">
+                <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
                   <LayoutDashboard className="size-4" />
                   <span className="font-medium">Dashboard</span>
                 </Link>

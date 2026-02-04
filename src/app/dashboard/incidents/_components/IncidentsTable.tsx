@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -14,11 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { IncidentListItem, IncidentStatus, IncidentPeriod } from "../_lib/types";
-import { apiListIncidents } from "../_lib/api";
+import type { IncidentListItem, IncidentStatus } from "../_lib/types";
 import { statusBadge } from "../_lib/utils";
 
-/* ── Helpers ── */
+/* -- Helpers -- */
 const formatFolio = (num?: number) => {
   if (num == null) return "\u2014";
   return `#${String(num).padStart(3, "0")}`;
@@ -31,36 +31,38 @@ const formatType = (type: string) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-/* ── Component ── */
+const formatDate = (d: string | null | undefined) => {
+  if (!d) return "\u2014";
+  return new Date(d).toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+/* -- Component -- */
 type Props = {
-  items?: IncidentListItem[]; 
+  items: IncidentListItem[];
   loading?: boolean;
   onOpen: (id: string) => void;
-  refreshKey?: number;
-  period?: IncidentPeriod;
-  onCreateClick?: () => void;
+  onRefresh?: () => void;
 };
 
 export default function IncidentsTable({
-  items,        // 👈 Agrégalo aquí
-  loading: loadingProp, // 👈 Agrégalo aquí (le cambio el nombre para no chocar con el estado interno)
-  refreshKey,
-  period,
-  onCreateClick,
+  items,
+  loading,
   onOpen,
+  onRefresh,
 }: Props) {
-  const [rows, setRows] = useState<IncidentListItem[]>([]);
-  const [loading, setLoading] = useState(false);
-
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "ALL">("ALL");
 
-  /* ── Pagination ── */
+  /* -- Pagination -- */
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
   const filtered = useMemo(() => {
-    let out = rows;
+    let out = items;
 
     if (statusFilter !== "ALL") out = out.filter((x) => x.status === statusFilter);
 
@@ -78,7 +80,7 @@ export default function IncidentsTable({
     }
 
     return out;
-  }, [rows, q, statusFilter]);
+  }, [items, q, statusFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginatedRows = useMemo(
@@ -86,28 +88,13 @@ export default function IncidentsTable({
     [filtered, pageIndex, pageSize]
   );
 
-  useEffect(() => setPageIndex(0), [filtered, pageSize]);
-
-  const load = async () => {
-    try {
-      setLoading(true);
-      const data = await apiListIncidents({ period });
-      setRows(data);
-    } catch (e: any) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, period]);
+  // Reset page when data or filters change
+  const resetPage = () => setPageIndex(0);
+  useMemo(() => { resetPage(); }, [filtered.length, pageSize]);
 
   return (
     <div className="space-y-3">
-      {/* ── Filters ── */}
+      {/* -- Filtros -- */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
           <Input
@@ -123,7 +110,7 @@ export default function IncidentsTable({
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as IncidentStatus | "ALL")}
           >
-            <SelectTrigger className="w-[140px] h-8">
+            <SelectTrigger className="w-full sm:w-[140px] h-8">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -134,12 +121,8 @@ export default function IncidentsTable({
             </SelectContent>
           </Select>
 
-          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+          <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
             ↻
-          </Button>
-
-          <Button size="sm" onClick={onCreateClick}>
-            Nueva
           </Button>
         </div>
       </div>
@@ -152,7 +135,7 @@ export default function IncidentsTable({
 
       <Separator />
 
-      {/* ── Table ── */}
+      {/* -- Tabla -- */}
       <div className="overflow-auto rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
@@ -161,8 +144,9 @@ export default function IncidentsTable({
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2">Titulo</th>
-              <th className="px-3 py-2">Reportado</th>
-              <th className="px-3 py-2 w-[1%]" />
+              <th className="px-3 py-2">Reportado por</th>
+              <th className="px-3 py-2">Fecha</th>
+              <th className="px-3 py-2 text-right">Acciones</th>
             </tr>
           </thead>
 
@@ -171,7 +155,7 @@ export default function IncidentsTable({
               <tr>
                 <td
                   className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={6}
+                  colSpan={7}
                 >
                   {loading ? "Cargando..." : "No hay incidencias para mostrar."}
                 </td>
@@ -186,28 +170,38 @@ export default function IncidentsTable({
 
                 <td className="px-3 py-2">{statusBadge(it.status)}</td>
 
-                <td className="px-3 py-2">{formatType(it.type)}</td>
+                <td className="px-3 py-2">
+                  <Badge variant="outline">{formatType(it.type)}</Badge>
+                </td>
 
                 <td className="px-3 py-2">
-                  {it.title ? (
-                    it.title
-                  ) : (
-                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  <button
+                    className="font-medium text-left hover:underline"
+                    onClick={() => onOpen(it.id)}
+                  >
+                    {it.title || <span className="text-muted-foreground">{"\u2014"}</span>}
+                  </button>
+                  {it.area?.name && (
+                    <div className="text-xs text-muted-foreground">
+                      {it.area.name}
+                    </div>
                   )}
                 </td>
 
                 <td className="px-3 py-2">
-                  {it.reportedBy?.employee ? (
-                    `${it.reportedBy.employee.nombres} ${it.reportedBy.employee.apellidos ?? ""}`.trim()
-                  ) : (
-                    <span className="text-muted-foreground">{"\u2014"}</span>
-                  )}
+                  <span className="text-xs">
+                    {it.reportedBy?.employee
+                      ? `${it.reportedBy.employee.nombres} ${it.reportedBy.employee.apellidos ?? ""}`.trim()
+                      : "\u2014"}
+                  </span>
                 </td>
+
+                <td className="px-3 py-2 text-xs">{formatDate(it.reportedAt)}</td>
 
                 <td className="px-3 py-2 text-right">
                   <Button
-                    variant="ghost"
                     size="sm"
+                    variant="outline"
                     onClick={() => onOpen(it.id)}
                   >
                     Ver
@@ -219,7 +213,7 @@ export default function IncidentsTable({
         </table>
       </div>
 
-      {/* ── Pagination ── */}
+      {/* -- Paginacion -- */}
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
           <Label htmlFor="incidents-page-size" className="text-sm font-medium">
@@ -229,7 +223,7 @@ export default function IncidentsTable({
             value={String(pageSize)}
             onValueChange={(v) => setPageSize(Number(v))}
           >
-            <SelectTrigger className="w-20 h-8" id="incidents-page-size">
+            <SelectTrigger className="w-16 sm:w-20 h-8" id="incidents-page-size">
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">

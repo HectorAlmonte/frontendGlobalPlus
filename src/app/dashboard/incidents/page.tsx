@@ -2,23 +2,23 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { BarChart3 } from "lucide-react";
 
-import IncidentsHeader from "./_components/IncidentsHeader";
-import IncidentsFiltersBar from "./_components/IncidentsFiltersBar";
 import IncidentsTable from "./_components/IncidentsTable";
 import IncidentDetailSheet from "./_components/IncidentDetailSheet";
 import CorrectiveModal from "./_components/CorrectiveModal";
 import CloseIncidentModal from "./_components/CloseIncidentModal";
-import IncidentsDashboardPanel from "./_components/IncidentsDashboardSheet";
 import CreateIncidentDialog from "./_components/CreateIncidentDialog";
+import IncidentKpiDashboard from "./_components/IncidentKpiDashboard";
 
-import {
+import type {
   CreateIncidentInput,
   IncidentDetail,
   IncidentListItem,
   IncidentStatus,
+  IncidentPeriod,
 } from "./_lib/types";
 
 import {
@@ -28,7 +28,7 @@ import {
   apiCloseIncidentForm,
 } from "./_lib/api";
 
-/** ===== Tipos mínimos para perfil ===== */
+/** ===== Tipos minimos para perfil ===== */
 type RoleKey = "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD" | string;
 
 type MeProfile = {
@@ -42,11 +42,17 @@ type MeProfile = {
   incidents?: any[];
 };
 
+const PERIOD_OPTIONS: { value: IncidentPeriod; label: string }[] = [
+  { value: "7d", label: "7D" },
+  { value: "15d", label: "15D" },
+  { value: "1m", label: "1M" },
+  { value: "1y", label: "1A" },
+  { value: "all", label: "Todo" },
+];
+
 export default function IncidentsPage() {
   const [items, setItems] = useState<IncidentListItem[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const [tab, setTab] = useState<"registro" | "dashboard">("registro");
 
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<IncidentStatus | "ALL">("ALL");
@@ -65,14 +71,18 @@ export default function IncidentsPage() {
   const [closeIncidentId, setCloseIncidentId] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
 
-  // ✅ BASE URL del backend (usa el mismo criterio que ya estabas usando)
+  // Period filter
+  const [period, setPeriod] = useState<IncidentPeriod>("all");
+
+  // Analytics toggle
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
   // =========================
   // PERFIL (para saber roleKey)
   // =========================
   const [profile, setProfile] = useState<MeProfile | null>(null);
-
   const roleKey: RoleKey | undefined = profile?.user?.role?.key;
 
   const fetchMyProfile = useCallback(async () => {
@@ -80,7 +90,7 @@ export default function IncidentsPage() {
       const res = await fetch(`${API_BASE}/api/users/me/profile`, {
         credentials: "include",
       });
-      if (!res.ok) return; // si falla, simplemente no setea
+      if (!res.ok) return;
       const data = (await res.json()) as MeProfile;
       setProfile(data);
     } catch {
@@ -93,27 +103,24 @@ export default function IncidentsPage() {
   }, [fetchMyProfile]);
 
   // =========================
-  // FILTROS
+  // METRICS FETCHER (for KPI dashboard)
   // =========================
-  const filtered = useMemo(() => {
-    let out = items;
-
-    if (status !== "ALL") out = out.filter((x) => x.status === status);
-
-    if (q.trim()) {
-      const needle = q.trim().toLowerCase();
-      out = out.filter((x) =>
-        (x.title ?? "").toLowerCase().includes(needle) ||
-        x.type.toLowerCase().includes(needle) ||
-        x.detail.toLowerCase().includes(needle) ||
-        (x.area?.name ?? "").toLowerCase().includes(needle) ||
-        (x.reportedBy?.username ?? "").toLowerCase().includes(needle) ||
-        String((x as any).number ?? "").toLowerCase().includes(needle) // number puede ser number
+  const fetchMetrics = useCallback(
+    async ({ range }: { range: string }) => {
+      const res = await fetch(
+        `${API_BASE}/api/incidents/metrics?range=${range}`,
+        { credentials: "include" }
       );
-    }
-
-    return out;
-  }, [items, q, status]);
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(
+          `No se pudieron cargar las metricas (${res.status}): ${txt}`
+        );
+      }
+      return res.json();
+    },
+    [API_BASE]
+  );
 
   // =========================
   // DATA LOADERS
@@ -121,14 +128,14 @@ export default function IncidentsPage() {
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiListIncidents();
+      const data = await apiListIncidents({ period });
       setItems(data);
     } catch (e) {
       console.error("Error al listar:", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   const fetchDetail = useCallback(async (id: string) => {
     setDetailLoading(true);
@@ -156,6 +163,33 @@ export default function IncidentsPage() {
     if (selectedId) fetchDetail(selectedId);
   }, [selectedId, fetchDetail]);
 
+  // =========================
+  // FILTROS
+  // =========================
+  const filtered = useMemo(() => {
+    let out = items;
+
+    if (status !== "ALL") out = out.filter((x) => x.status === status);
+
+    if (q.trim()) {
+      const needle = q.trim().toLowerCase();
+      out = out.filter(
+        (x) =>
+          (x.title ?? "").toLowerCase().includes(needle) ||
+          x.type.toLowerCase().includes(needle) ||
+          x.detail.toLowerCase().includes(needle) ||
+          (x.area?.name ?? "").toLowerCase().includes(needle) ||
+          (x.reportedBy?.username ?? "").toLowerCase().includes(needle) ||
+          String((x as any).number ?? "").toLowerCase().includes(needle)
+      );
+    }
+
+    return out;
+  }, [items, q, status]);
+
+  // =========================
+  // HANDLERS
+  // =========================
   async function handleCreate(input: CreateIncidentInput) {
     setCreating(true);
     try {
@@ -174,7 +208,10 @@ export default function IncidentsPage() {
       if (!closeIncidentId) return;
       setClosing(true);
       try {
-        await apiCloseIncidentForm(closeIncidentId, { detail: closeDetail, files });
+        await apiCloseIncidentForm(closeIncidentId, {
+          detail: closeDetail,
+          files,
+        });
         setCloseOpen(false);
         await fetchList();
         if (selectedId === closeIncidentId) await fetchDetail(closeIncidentId);
@@ -188,71 +225,105 @@ export default function IncidentsPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-6 space-y-6">
-      <Card className="border-muted/60 shadow-sm">
-        <IncidentsHeader />
+    <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7 space-y-6">
+      {/* ===== HEADER ===== */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Incidencias</h1>
+          <p className="text-sm text-muted-foreground">
+            Historial, seguimiento, correctivos y levantamientos.
+          </p>
+        </div>
 
-        <CardContent className="space-y-4">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="registro" className="font-bold">
-                Registro de Incidentes
-              </TabsTrigger>
-              <TabsTrigger value="dashboard" className="font-bold">
-                Dashboard & Analytics
-              </TabsTrigger>
-            </TabsList>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowAnalytics((v) => !v)}
+            className="gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            {showAnalytics ? "Ocultar analytics" : "Analytics"}
+          </Button>
 
-            <TabsContent value="registro" className="mt-4 space-y-4 focus-visible:outline-none">
-              <IncidentsFiltersBar
-                q={q}
-                setQ={setQ}
-                status={status}
-                setStatus={setStatus}
-                loading={loading}
-                countLabel={`${filtered.length} incidencias`}
-                onRefresh={fetchList}
-                rightSlot={
-                  <CreateIncidentDialog
-                    open={openCreate}
-                    onOpenChange={setOpenCreate}
-                    creating={creating}
-                    onCreate={handleCreate}
-                    roleKey={roleKey}
-                    profile={profile} // ✅ Agregar esta línea // ✅ ya no usa "user"
-                  />
-                }
-              />
+          <CreateIncidentDialog
+            open={openCreate}
+            onOpenChange={setOpenCreate}
+            creating={creating}
+            onCreate={handleCreate}
+            roleKey={roleKey}
+            profile={profile}
+          />
+        </div>
+      </div>
 
-              <IncidentsTable
-                loading={loading}
-                items={filtered}
-                onOpen={(id) => {
-                  setSelectedId(id);
-                  setOpenSheet(true);
-                }}
-              />
-            </TabsContent>
+      {/* ===== ANALYTICS (toggleable) ===== */}
+      {showAnalytics && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Indicadores
+            </h2>
+            <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+              {PERIOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPeriod(opt.value)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    period === opt.value
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            <TabsContent value="dashboard" className="mt-4 focus-visible:outline-none">
-              <IncidentsDashboardPanel
-                open={tab === "dashboard"}
-                fetchMetrics={async ({ range }) => {
-                  const res = await fetch(`${API_BASE}/api/incidents/metrics?range=${range}`, {
-                    credentials: "include",
-                  });
-                  if (!res.ok) {
-                    const txt = await res.text().catch(() => "");
-                    throw new Error(`No se pudieron cargar las métricas (${res.status}): ${txt}`);
-                  }
-                  return res.json();
-                }}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          <IncidentKpiDashboard
+            period={period}
+            fetchMetrics={fetchMetrics}
+          />
+        </div>
+      )}
 
+      {/* ===== TABLA ===== */}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="space-y-0.5">
+            <h2 className="text-sm font-semibold">Listado de incidencias</h2>
+            <p className="text-xs text-muted-foreground">
+              {period === "all"
+                ? "Mostrando todas las incidencias."
+                : `Mostrando incidencias de los ultimos ${
+                    period === "7d"
+                      ? "7 dias"
+                      : period === "15d"
+                      ? "15 dias"
+                      : period === "1m"
+                      ? "30 dias"
+                      : "12 meses"
+                  }.`}
+            </p>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="p-4">
+          <IncidentsTable
+            loading={loading}
+            items={filtered}
+            onOpen={(id) => {
+              setSelectedId(id);
+              setOpenSheet(true);
+            }}
+            onRefresh={fetchList}
+          />
+        </div>
+      </div>
+
+      {/* ===== PANEL DETALLE ===== */}
       <IncidentDetailSheet
         open={openSheet}
         onOpenChange={setOpenSheet}
@@ -280,6 +351,7 @@ export default function IncidentsPage() {
           await fetchList();
         }}
         profile={profile}
+        roleKey={roleKey}
       />
 
       <CloseIncidentModal

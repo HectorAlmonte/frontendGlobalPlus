@@ -10,10 +10,8 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  ClipboardList,
   Clock,
   ListTodo,
-  ShieldCheck,
   TrendingUp,
   User as UserIcon,
 } from "lucide-react"
@@ -157,7 +155,7 @@ export default function Page() {
   }, [user])
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 pt-2">
+    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6 pt-2">
       {/* Welcome */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">
@@ -170,7 +168,7 @@ export default function Page() {
 
       {/* Stats grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="border-none shadow-sm">
               <CardContent className="p-5 space-y-3">
@@ -188,7 +186,7 @@ export default function Page() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Incidencias</h2>
             </div>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
               <StatCard label="Total" value={stats.incidents.total} icon={TrendingUp} color="primary" />
               <StatCard label="Abiertas" value={stats.incidents.open} icon={AlertTriangle} color="amber" />
               <StatCard label="En progreso" value={stats.incidents.inProgress} icon={Clock} color="blue" />
@@ -202,7 +200,7 @@ export default function Page() {
               <ListTodo className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tareas</h2>
             </div>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
               <StatCard label="Total" value={stats.tasks.total} icon={TrendingUp} color="primary" />
               <StatCard label="Pendientes" value={stats.tasks.pending} icon={Clock} color="amber" />
               <StatCard label="En progreso" value={stats.tasks.inProgress} icon={Activity} color="blue" />
@@ -234,24 +232,6 @@ export default function Page() {
             icon={UserIcon}
             label="Mi perfil"
             description="Ver perfil e historial"
-          />
-          <QuickLink
-            href="/dashboard/ordenes"
-            icon={ClipboardList}
-            label="Ordenes"
-            description="Gestion de ordenes"
-          />
-          <QuickLink
-            href="/dashboard/seguridad"
-            icon={ShieldCheck}
-            label="Seguridad"
-            description="Control de seguridad"
-          />
-          <QuickLink
-            href="/dashboard/settings/change-password"
-            icon={Activity}
-            label="Configuracion"
-            description="Cambiar contrasena"
           />
         </div>
       </div>

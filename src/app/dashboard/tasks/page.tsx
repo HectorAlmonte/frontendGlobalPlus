@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, BarChart3 } from "lucide-react";
 
 import type { TaskRow, TaskStats, TaskPeriod } from "./_lib/types";
 import { apiGetTaskStats } from "./_lib/api";
@@ -34,6 +34,9 @@ export default function TasksPage() {
 
   // Period filter
   const [period, setPeriod] = useState<TaskPeriod>("all");
+
+  // Analytics toggle
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // KPI stats
   const [stats, setStats] = useState<TaskStats | null>(null);
@@ -95,7 +98,7 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-7 space-y-6">
+    <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7 space-y-6">
       {/* ===== HEADER ===== */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -105,50 +108,63 @@ export default function TasksPage() {
           </p>
         </div>
 
-        <Button onClick={openCreate} className="gap-2 sm:min-w-[160px]">
-          <Plus className="h-4 w-4" />
-          Nueva tarea
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowAnalytics((v) => !v)}
+            className="gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            {showAnalytics ? "Ocultar analytics" : "Analytics"}
+          </Button>
+
+          <Button onClick={openCreate} className="gap-2 sm:min-w-[160px]">
+            <Plus className="h-4 w-4" />
+            Nueva tarea
+          </Button>
+        </div>
       </div>
 
       {/* ===== PERIOD SELECTOR + KPIs ===== */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Indicadores
-          </h2>
-          <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
-            {PERIOD_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setPeriod(opt.value)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                  period === opt.value
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+      {showAnalytics && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Indicadores
+            </h2>
+            <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+              {PERIOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPeriod(opt.value)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    period === opt.value
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {kpiLoading ? (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="border-none shadow-sm">
-                <CardContent className="p-4 space-y-2">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-7 w-12" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : stats ? (
-          <TaskKpiDashboard stats={stats} />
-        ) : null}
-      </div>
+          {kpiLoading ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="border-none shadow-sm">
+                  <CardContent className="p-4 space-y-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-7 w-12" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : stats ? (
+            <TaskKpiDashboard stats={stats} />
+          ) : null}
+        </div>
+      )}
 
       {/* ===== TABLA ===== */}
       <div className="rounded-xl border bg-card shadow-sm">

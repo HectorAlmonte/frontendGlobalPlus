@@ -550,7 +550,7 @@ export default function MyProfilePage() {
                             {it.code || "—"}
                           </TableCell>
 
-                          <TableCell className="max-w-[400px]">
+                          <TableCell className="max-w-[200px] sm:max-w-[400px]">
                             <div className="truncate font-medium">
                               {it.title || "—"}
                             </div>

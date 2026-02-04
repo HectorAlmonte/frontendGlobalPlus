@@ -8,15 +8,54 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff } from "lucide-react";
 
+function PasswordInput({
+  label,
+  value,
+  onChange,
+  show,
+  setShow,
+  autoComplete,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  show: boolean;
+  setShow: (v: boolean) => void;
+  autoComplete?: string;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="relative">
+        <Input
+          type={show ? "text" : "password"}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShow(!show)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
 
-  // 👁️ estados de visibilidad
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
@@ -25,14 +64,11 @@ export default function ChangePasswordPage() {
   const minLen = 8;
 
   const validate = () => {
-    if (!currentPassword || !newPassword || !confirm) {
+    if (!currentPassword || !newPassword) {
       return "Completa todos los campos.";
     }
     if (newPassword.length < minLen) {
       return `La nueva contraseña debe tener al menos ${minLen} caracteres.`;
-    }
-    if (newPassword !== confirm) {
-      return "La confirmación no coincide con la nueva contraseña.";
     }
     if (currentPassword === newPassword) {
       return "La nueva contraseña no puede ser igual a la actual.";
@@ -72,7 +108,6 @@ export default function ChangePasswordPage() {
       setOk("Contraseña actualizada correctamente.");
       setCurrentPassword("");
       setNewPassword("");
-      setConfirm("");
     } catch (e: any) {
       setErr(e.message || "Error inesperado.");
     } finally {
@@ -80,48 +115,8 @@ export default function ChangePasswordPage() {
     }
   };
 
-  const PasswordInput = ({
-    label,
-    value,
-    onChange,
-    show,
-    setShow,
-    autoComplete,
-    placeholder,
-  }: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    show: boolean;
-    setShow: (v: boolean) => void;
-    autoComplete?: string;
-    placeholder?: string;
-  }) => (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="relative">
-        <Input
-          type={show ? "text" : "password"}
-          autoComplete={autoComplete}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="pr-10"
-        />
-        <button
-          type="button"
-          onClick={() => setShow(!show)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
-        >
-          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">
           Cambiar contraseña
@@ -149,27 +144,15 @@ export default function ChangePasswordPage() {
 
             <Separator />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <PasswordInput
-                label="Nueva contraseña"
-                value={newPassword}
-                onChange={setNewPassword}
-                show={showNew}
-                setShow={setShowNew}
-                autoComplete="new-password"
-                placeholder={`Mínimo ${minLen} caracteres`}
-              />
-
-              <PasswordInput
-                label="Confirmar nueva contraseña"
-                value={confirm}
-                onChange={setConfirm}
-                show={showConfirm}
-                setShow={setShowConfirm}
-                autoComplete="new-password"
-                placeholder="Repite la nueva contraseña"
-              />
-            </div>
+            <PasswordInput
+              label="Nueva contraseña"
+              value={newPassword}
+              onChange={setNewPassword}
+              show={showNew}
+              setShow={setShowNew}
+              autoComplete="new-password"
+              placeholder={`Mínimo ${minLen} caracteres`}
+            />
 
             {ok && (
               <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
@@ -189,7 +172,6 @@ export default function ChangePasswordPage() {
                 onClick={() => {
                   setCurrentPassword("");
                   setNewPassword("");
-                  setConfirm("");
                   setOk(null);
                   setErr(null);
                 }}

@@ -154,12 +154,6 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                     <FieldLabel htmlFor="password" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Contrasena
                     </FieldLabel>
-                    <a
-                      href="#"
-                      className="ml-auto text-xs text-muted-foreground underline-offset-2 hover:underline hover:text-foreground transition-colors"
-                    >
-                      Olvidaste tu contrasena?
-                    </a>
                   </div>
 
                   <div className="relative">
@@ -201,11 +195,8 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   </Button>
                 </Field>
 
-                <FieldDescription className="text-center text-xs">
-                  No tiene una cuenta?{" "}
-                  <a href="#" className="font-medium text-primary hover:underline">
-                    Contactanos
-                  </a>
+                <FieldDescription className="text-center text-xs text-muted-foreground">
+                  Si olvidaste tu contrasena, contacta a soporte para restablecerla.
                 </FieldDescription>
               </FieldGroup>
             </form>

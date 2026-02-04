@@ -178,7 +178,7 @@ export default function TasksTable({
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as TaskStatus | "ALL")}
           >
-            <SelectTrigger className="w-[140px] h-8">
+            <SelectTrigger className="w-full sm:w-[140px] h-8">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -194,7 +194,7 @@ export default function TasksTable({
             value={priorityFilter}
             onValueChange={(v) => setPriorityFilter(v as TaskPriority | "ALL")}
           >
-            <SelectTrigger className="w-[120px] h-8">
+            <SelectTrigger className="w-full sm:w-[120px] h-8">
               <SelectValue placeholder="Prioridad" />
             </SelectTrigger>
             <SelectContent>
@@ -364,7 +364,7 @@ export default function TasksTable({
             value={String(pageSize)}
             onValueChange={(v) => setPageSize(Number(v))}
           >
-            <SelectTrigger className="w-20 h-8" id="tasks-page-size">
+            <SelectTrigger className="w-16 sm:w-20 h-8" id="tasks-page-size">
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">

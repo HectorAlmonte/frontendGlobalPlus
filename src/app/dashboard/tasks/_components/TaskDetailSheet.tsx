@@ -224,28 +224,26 @@ export default function TaskDetailSheet({ open, taskId, onClose, onChanged, onEd
       <SheetContent className="sm:max-w-xl p-0 flex flex-col bg-white">
         
         {/* Header */}
-        <SheetHeader className="p-6 pr-16 border-b space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Hash className="h-4 w-4" />
-              <span className="text-xs font-mono uppercase tracking-wider">Tarea #{taskId?.slice(-6)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {task && !task.isDeleted && (
-                <Button variant="outline" size="sm" onClick={() => onEditClick(task)} className="h-8 shadow-sm">
-                  <Pencil className="h-3.5 w-3.5 mr-2" />
-                  Editar
-                </Button>
-              )}
-              {task && task.status !== "COMPLETED" && !task.isDeleted && (
+        <SheetHeader className="p-6 border-b space-y-4">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Hash className="h-4 w-4" />
+            <span className="text-xs font-mono uppercase tracking-wider">Tarea #{taskId?.slice(-6)}</span>
+          </div>
+          <SheetTitle className="text-2xl font-bold text-slate-900">{task?.title || "Cargando..."}</SheetTitle>
+          {task && !task.isDeleted && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => onEditClick(task)} className="h-8 shadow-sm">
+                <Pencil className="h-3.5 w-3.5 mr-2" />
+                Editar
+              </Button>
+              {task.status !== "COMPLETED" && (
                 <Button size="sm" onClick={() => handleStatusChange("COMPLETED")} disabled={changingStatus} className="h-8 gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   {changingStatus ? "Guardando..." : "Completar"}
                 </Button>
               )}
             </div>
-          </div>
-          <SheetTitle className="text-2xl font-bold text-slate-900">{task?.title || "Cargando..."}</SheetTitle>
+          )}
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
@@ -257,7 +255,7 @@ export default function TaskDetailSheet({ open, taskId, onClose, onChanged, onEd
             <div className="p-6 space-y-8">
               
               {/* Grid de Información Principal */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Estado</label>
                   <Select value={task.status} onValueChange={(v) => handleStatusChange(v as TaskStatus)} disabled={changingStatus}>
