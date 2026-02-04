@@ -164,14 +164,16 @@ function PrintOnlyDocument(props: {
 
   return (
     <div data-print-root>
-      {/* ✅ CABECERA (solo lo requerido) */}
-      <SstHeader
-        codigo={header?.codigo}
-        version={header?.version}
-        fechaVigencia={header?.fechaVigencia}
-        pagina={header?.pagina}
-        logoSrc={header?.logoSrc}
-      />
+      {/* ✅ CABECERA (solo si hay documento configurado) */}
+      {header && (
+        <SstHeader
+          codigo={header.codigo}
+          version={header.version}
+          fechaVigencia={header.fechaVigencia}
+          pagina={header.pagina}
+          logoSrc={header.logoSrc}
+        />
+      )}
 
       {/* ===== Incidencia ===== */}
       <div className="print-section print-card">

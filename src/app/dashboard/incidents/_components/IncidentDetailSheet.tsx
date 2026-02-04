@@ -20,6 +20,8 @@ import { normalizeCauses, statusBadge } from "../_lib/utils";
 
 import { useWord } from "@/context/AppContext";
 import { printIncidentToPdf } from "./incident-print";
+import { apiGetModuleDocument } from "@/app/dashboard/documents/_lib/api";
+import { formatDate } from "@/app/dashboard/documents/_lib/utils";
 
 type Props = {
   open: boolean;
@@ -247,9 +249,37 @@ export default function IncidentDetailSheet({
   const btnInteractive =
     "transition-all duration-150 hover:shadow-sm active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
-  const handlePrint = React.useCallback(() => {
+  const [printing, setPrinting] = React.useState(false);
+
+  const handlePrint = React.useCallback(async () => {
     if (!detail) return;
-    printIncidentToPdf({ detail, selectedId: incidentIdLabel });
+    setPrinting(true);
+    try {
+      const moduleDoc = await apiGetModuleDocument("INCIDENTS").catch(
+        () => null
+      );
+
+      const header =
+        moduleDoc?.currentVersion && !moduleDoc.currentVersion.isExpired
+          ? {
+              codigo: moduleDoc.code,
+              version: String(moduleDoc.currentVersion.versionNumber).padStart(
+                2,
+                "0"
+              ),
+              fechaVigencia: formatDate(
+                moduleDoc.currentVersion.validFrom
+              ),
+            }
+          : undefined;
+
+      printIncidentToPdf({ detail, selectedId: incidentIdLabel, header });
+    } catch (e) {
+      console.error("Error al obtener cabecera dinámica:", e);
+      printIncidentToPdf({ detail, selectedId: incidentIdLabel });
+    } finally {
+      setPrinting(false);
+    }
   }, [detail, incidentIdLabel]);
 
   return (
@@ -286,14 +316,14 @@ export default function IncidentDetailSheet({
               <Button
                 variant="secondary"
                 onClick={handlePrint}
-                disabled={!detail || detailLoading}
+                disabled={!detail || detailLoading || printing}
                 className={`${btnInteractive} ${
-                  !detail || detailLoading
+                  !detail || detailLoading || printing
                     ? "cursor-not-allowed opacity-60"
                     : "cursor-pointer hover:bg-muted/70"
                 }`}
               >
-                Imprimir / PDF
+                {printing ? "Preparando..." : "Imprimir / PDF"}
               </Button>
 
               <div className="flex-1" />
