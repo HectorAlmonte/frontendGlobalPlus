@@ -26,6 +26,7 @@ import {
   apiGetIncidentDetail,
   apiListIncidents,
   apiCloseIncidentForm,
+  API_BASE,
 } from "./_lib/api";
 
 /** ===== Tipos minimos para perfil ===== */
@@ -77,7 +78,7 @@ export default function IncidentsPage() {
   // Analytics toggle
   const [showAnalytics, setShowAnalytics] = useState(false);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+  // API_BASE importado desde api.ts (usa NEXT_PUBLIC_API_URL)
 
   // =========================
   // PERFIL (para saber roleKey)
