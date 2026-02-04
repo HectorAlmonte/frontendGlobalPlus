@@ -18,6 +18,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { ModeToggle } from "@/components/mode-toggle"
+import { RoleGuard } from "@/components/role-guard"
 import { useWord } from "@/context/AppContext"
 
 export default function Page({ children }: { children: React.ReactNode }) {
@@ -55,7 +56,7 @@ export default function Page({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        {children}
+        <RoleGuard>{children}</RoleGuard>
       </SidebarInset>
     </SidebarProvider>
   )

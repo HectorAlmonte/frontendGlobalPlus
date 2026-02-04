@@ -45,6 +45,7 @@ import {
   UserCog,
   UsersRound,
   CircleDot,
+  User,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -289,6 +290,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (loadingUser) return null;
 
   const isDashboardHome = pathname === "/dashboard";
+  const roleKey = user?.role?.key;
+  const hasFullAccess = ["ADMIN", "SUPERVISOR"].includes(roleKey ?? "");
 
   return (
     <Sidebar
@@ -337,24 +340,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* ── Content ── */}
       <SidebarContent className="px-2">
-        {/* Dashboard home link */}
+        {/* Dashboard home link or Mi Perfil for restricted roles */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
             General
           </SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Dashboard"
-                data-active={isDashboardHome}
-              >
-                <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
-                  <LayoutDashboard className="size-4" />
-                  <span className="font-medium">Dashboard</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {hasFullAccess ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Dashboard"
+                  data-active={isDashboardHome}
+                >
+                  <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
+                    <LayoutDashboard className="size-4" />
+                    <span className="font-medium">Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Mi Perfil"
+                  data-active={pathname === "/dashboard/me"}
+                >
+                  <Link href="/dashboard/me" onClick={() => isMobile && setOpenMobile(false)}>
+                    <User className="size-4" />
+                    <span className="font-medium">Mi Perfil</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroup>
 
