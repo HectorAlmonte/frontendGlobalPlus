@@ -55,9 +55,10 @@ export type DocumentRow = {
     name: string;
   } | null;
 
-  area?: {
+  workArea?: {
     id: string;
     name: string;
+    code: string;
   } | null;
 
   currentVersion?: {
@@ -90,7 +91,7 @@ export type DocumentDetail = DocumentRow & {
 export type CreateDocumentInput = {
   name: string;
   documentTypeId: string;
-  areaId: string;
+  workAreaId: string;
   moduleKey: string;
   notes: string;
   file: File | null;

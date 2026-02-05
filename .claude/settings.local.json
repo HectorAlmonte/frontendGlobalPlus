@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(npx next build:*)",
-      "Bash(dir \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\")"
+      "Bash(dir \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\")",
+      "Bash(grep:*)",
+      "Bash(copy \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\\\\public\\\\logo\\\\logo-solo-icono.png\" \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\\\\src\\\\app\\\\icon.png\")",
+      "Bash(npm run build:*)"
     ]
   }
 }

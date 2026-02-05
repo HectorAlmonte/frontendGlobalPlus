@@ -256,6 +256,14 @@ export default function TaskFormModal({
           incidentId: incidentId || null,
         });
       } else {
+        // Auto-agregar subtarea pendiente en el input
+        const finalSubItems = [...subItems];
+        const pendingSub = newSubItem.trim();
+        if (pendingSub) {
+          finalSubItems.push(pendingSub);
+          setNewSubItem("");
+        }
+
         await apiCreateTask({
           title: trimmedTitle,
           description: description.trim() || undefined,
@@ -263,7 +271,7 @@ export default function TaskFormModal({
           dueDate: dueDate || null,
           incidentId: incidentId || null,
           assignees: assignees.map((a) => a.id),
-          subItems: subItems.map((s) => ({ title: s })),
+          subItems: finalSubItems.map((s) => ({ title: s })),
         });
       }
 

@@ -25,7 +25,7 @@ import {
 import SearchSelect from "@/app/dashboard/incidents/_components/SearchSelect";
 
 import type { DocumentType, CreateDocumentInput } from "../_lib/types";
-import { apiSearchAreas } from "../_lib/api";
+import { apiSearchWorkAreas } from "../_lib/api";
 
 const MODULE_OPTIONS = [
   { value: "", label: "Ninguno" },
@@ -38,7 +38,7 @@ const MODULE_OPTIONS = [
 const initialState: CreateDocumentInput = {
   name: "",
   documentTypeId: "",
-  areaId: "",
+  workAreaId: "",
   moduleKey: "",
   notes: "",
   file: null,
@@ -68,7 +68,7 @@ export default function CreateDocumentDialog({
   const canSubmit =
     form.name.trim().length > 0 &&
     Boolean(form.documentTypeId) &&
-    Boolean(form.areaId) &&
+    Boolean(form.workAreaId) &&
     form.file !== null;
 
   async function handleSubmit() {
@@ -76,9 +76,9 @@ export default function CreateDocumentDialog({
     await onCreate(form);
   }
 
-  const safeSearchAreas = async (q: string) => {
+  const safeSearchWorkAreas = async (q: string) => {
     if (creating) return [];
-    return apiSearchAreas(q);
+    return apiSearchWorkAreas(q);
   };
 
   return (
@@ -153,14 +153,14 @@ export default function CreateDocumentDialog({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label>Área</Label>
+                <Label>Área de trabajo</Label>
                 <SearchSelect
-                  value={form.areaId}
-                  onChange={(id) => setForm((p) => ({ ...p, areaId: id }))}
-                  placeholder="Selecciona área..."
-                  searchPlaceholder="Buscar área..."
-                  emptyText="No se encontraron áreas"
-                  fetcher={safeSearchAreas}
+                  value={form.workAreaId}
+                  onChange={(id) => setForm((p) => ({ ...p, workAreaId: id }))}
+                  placeholder="Selecciona área de trabajo..."
+                  searchPlaceholder="Buscar área de trabajo..."
+                  emptyText="No se encontraron áreas de trabajo"
+                  fetcher={safeSearchWorkAreas}
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function CreateDocumentDialog({
 
             {!canSubmit && (
               <p className="text-xs text-muted-foreground">
-                Para crear, completa: <b>Nombre</b>, <b>Tipo</b>, <b>Área</b> y{" "}
+                Para crear, completa: <b>Nombre</b>, <b>Tipo</b>, <b>Área de trabajo</b> y{" "}
                 <b>Archivo PDF</b>.
               </p>
             )}

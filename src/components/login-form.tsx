@@ -4,17 +4,19 @@ import React, { useEffect, useState } from "react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
 import { useWord } from "@/context/AppContext"
-import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react"
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  ShieldCheck,
+  BarChart3,
+  FileText,
+  Users,
+} from "lucide-react"
 
 type LoginFormProps = React.ComponentPropsWithoutRef<"div">
 
@@ -26,10 +28,12 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (submitting) return
+    setError("")
 
     try {
       setSubmitting(true)
@@ -50,7 +54,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
       } = await res.json()
 
       if (!res.ok) {
-        alert(data.message ?? "Error de login")
+        setError(data.message ?? "Credenciales incorrectas")
         return
       }
 
@@ -65,9 +69,8 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
       }
 
       router.replace("/dashboard")
-    } catch (error) {
-      console.error("Error en login:", error)
-      alert("Error de conexion con el servidor")
+    } catch {
+      setError("Error de conexion con el servidor")
     } finally {
       setSubmitting(false)
     }
@@ -102,134 +105,239 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
     checkSession()
   }, [router, setUser])
 
+  const features = [
+    {
+      icon: ShieldCheck,
+      title: "Seguridad y Salud",
+      desc: "Gestiona incidencias y cumplimiento normativo SST",
+    },
+    {
+      icon: FileText,
+      title: "Control Documental",
+      desc: "Versiones, vigencias y trazabilidad completa",
+    },
+    {
+      icon: BarChart3,
+      title: "Indicadores en tiempo real",
+      desc: "Dashboards con metricas clave de operacion",
+    },
+    {
+      icon: Users,
+      title: "Gestion de Personal",
+      desc: "Visitas, tareas y ordenes centralizadas",
+    },
+  ]
+
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden border-0 shadow-xl">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          {/* Left: Form */}
-          <div className="flex flex-col justify-center p-8 md:p-10 lg:p-12">
-            <form onSubmit={handleLogin}>
-              <FieldGroup>
-                {/* Branding */}
-                <div className="flex flex-col items-center gap-4 text-center mb-2">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <Image
-                      src="/logo/logo.png"
-                      alt="Global Plus"
-                      width={32}
-                      height={32}
-                      className="object-contain"
-                      priority
-                    />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight">
-                      Global Plus
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Ingrese sus credenciales para acceder al sistema
-                    </p>
-                  </div>
-                </div>
+    <div className={cn("flex w-full", className)} {...props}>
+      {/* ===== LEFT: Brand Panel ===== */}
+      <div className="relative hidden w-[55%] overflow-hidden lg:block">
+        {/* Background */}
+        <div className="absolute inset-0 bg-[#0f2a4a]" />
 
-                {/* DNI */}
-                <Field>
-                  <FieldLabel htmlFor="dni" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    DNI
-                  </FieldLabel>
-                  <Input
-                    id="dni"
-                    placeholder="12345678"
-                    required
-                    value={dni}
-                    onChange={(e) => setDni(e.target.value)}
-                    className="h-11"
-                    disabled={submitting}
-                  />
-                </Field>
+        {/* Subtle geometric pattern */}
+        <div className="absolute inset-0 opacity-[0.04]">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+              backgroundSize: "40px 40px",
+            }}
+          />
+        </div>
 
-                {/* Password */}
-                <Field>
-                  <div className="flex items-center">
-                    <FieldLabel htmlFor="password" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Contrasena
-                    </FieldLabel>
-                  </div>
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0f2a4a] via-[#0f2a4a]/95 to-[#1a3a5c]" />
 
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-11 pr-10"
-                      disabled={submitting}
-                    />
-                    <button
-                      type="button"
-                      aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </Field>
+        {/* Accent glow */}
+        <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-[#e06060]/10 blur-3xl" />
+        <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
 
-                {/* Submit */}
-                <Field>
-                  <Button type="submit" className="h-11 w-full font-semibold" disabled={submitting}>
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Ingresando...
-                      </>
-                    ) : (
-                      "Ingresar"
-                    )}
-                  </Button>
-                </Field>
-
-                <FieldDescription className="text-center text-xs text-muted-foreground">
-                  Si olvidaste tu contrasena, contacta a soporte para restablecerla.
-                </FieldDescription>
-              </FieldGroup>
-            </form>
+        {/* Content */}
+        <div className="relative flex h-full flex-col justify-between p-12 text-white">
+          {/* Logo */}
+          <div>
+            <Image
+              src="/logo/logo.png"
+              alt="GlobalPlus"
+              width={220}
+              height={56}
+              className="object-contain"
+              priority
+            />
           </div>
 
-          {/* Right: Visual panel */}
-          <div className="relative hidden md:block bg-gradient-to-br from-primary/90 to-primary overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/logo2.jpg')] bg-cover bg-center opacity-20 mix-blend-overlay" />
-            <div className="relative flex h-full flex-col items-center justify-center p-10 text-white">
-              <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-6">
-                <ShieldCheck className="h-8 w-8" />
-              </div>
-              <h2 className="text-2xl font-bold text-center">
-                Sistema de Gestion
+          {/* Features */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold leading-tight tracking-tight">
+                Plataforma de
+                <br />
+                <span className="text-[#e8787a]">Gestion Integral</span>
               </h2>
-              <p className="mt-3 text-center text-sm text-white/80 max-w-[280px] leading-relaxed">
-                Plataforma integral para la gestion de incidencias, tareas, inventarios y personal.
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-white/60">
+                Centraliza la operacion de tu empresa en un solo lugar.
+                Seguridad, documentos, personal y reportes en tiempo real.
               </p>
+            </div>
 
-              {/* Decorative dots */}
-              <div className="absolute bottom-8 flex gap-1.5">
-                <div className="h-1.5 w-8 rounded-full bg-white/40" />
-                <div className="h-1.5 w-1.5 rounded-full bg-white/25" />
-                <div className="h-1.5 w-1.5 rounded-full bg-white/25" />
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              {features.map((f) => (
+                <div
+                  key={f.title}
+                  className="group rounded-xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/[0.06]"
+                >
+                  <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
+                    <f.icon className="h-4.5 w-4.5 text-[#e8787a]" />
+                  </div>
+                  <p className="text-sm font-semibold">{f.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-white/50">
+                    {f.desc}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <p className="text-center text-xs text-muted-foreground">
-        Global Plus &middot; Sistema de gestion &middot; {new Date().getFullYear()}
-      </p>
+          {/* Footer */}
+          <div className="flex items-center justify-between text-xs text-white/30">
+            <span>GlobalPlus &middot; Logistica Integral</span>
+            <span>&copy; {new Date().getFullYear()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== RIGHT: Login Form ===== */}
+      <div className="flex w-full flex-col lg:w-[45%]">
+        {/* Mobile header */}
+        <div className="flex items-center justify-center gap-3 border-b bg-background p-4 lg:hidden">
+          <Image
+            src="/logo2.jpg"
+            alt="GlobalPlus"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
+          <span className="text-lg font-bold tracking-tight">GlobalPlus</span>
+        </div>
+
+        {/* Form container */}
+        <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12 sm:px-12 lg:px-16">
+          <div className="w-full max-w-sm">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="mb-6 hidden lg:block">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border bg-muted/50">
+                  <Image
+                    src="/logo2.jpg"
+                    alt="GlobalPlus"
+                    width={28}
+                    height={28}
+                    className="rounded-md"
+                  />
+                </div>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Iniciar sesion
+              </h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Ingresa tus credenciales para acceder al sistema
+              </p>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="dni"
+                  className="text-sm font-medium"
+                >
+                  DNI
+                </Label>
+                <Input
+                  id="dni"
+                  placeholder="12345678"
+                  required
+                  value={dni}
+                  onChange={(e) => setDni(e.target.value)}
+                  className="h-11"
+                  disabled={submitting}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="password"
+                  className="text-sm font-medium"
+                >
+                  Contraseñnoa
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-11 pr-11"
+                    disabled={submitting}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    aria-label={
+                      showPassword ? "Ocultar contrasena" : "Mostrar contrasena"
+                    }
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="h-11 w-full text-sm font-semibold"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Ingresando...
+                  </>
+                ) : (
+                  "Ingresar"
+                )}
+              </Button>
+            </form>
+
+            {/* Footer */}
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              Si olvidaste tu contrasena, contacta al administrador del sistema.
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="border-t px-6 py-3 text-center text-xs text-muted-foreground">
+          GlobalPlus &middot; Sistema de Gestion Integral &middot;{" "}
+          {new Date().getFullYear()}
+        </div>
+      </div>
     </div>
   )
 }

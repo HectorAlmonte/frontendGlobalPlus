@@ -1,0 +1,25 @@
+{
+  "name": "GlobalPlus - Logistica Integral",
+  "short_name": "GlobalPlus",
+  "description": "Plataforma integral de gestion: seguridad, documentos, personal y reportes.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f2a4a",
+  "theme_color": "#0f2a4a",
+  "icons": [
+    {
+      "src": "/logo/logo-solo-icono.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo/logo-solo-icono.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

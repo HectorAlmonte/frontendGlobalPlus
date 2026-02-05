@@ -77,7 +77,7 @@ export function apiGetDocument(id: string) {
 export async function apiCreateDocument(input: {
   name: string;
   documentTypeId: string;
-  areaId: string;
+  workAreaId: string;
   moduleKey?: string;
   notes?: string;
   file: File;
@@ -85,7 +85,7 @@ export async function apiCreateDocument(input: {
   const fd = new FormData();
   fd.append("name", input.name);
   fd.append("documentTypeId", input.documentTypeId);
-  fd.append("areaId", input.areaId);
+  fd.append("workAreaId", input.workAreaId);
   if (input.moduleKey) fd.append("moduleKey", input.moduleKey);
   if (input.notes) fd.append("notes", input.notes);
   fd.append("file", input.file);
@@ -163,23 +163,23 @@ export function apiListDocumentTypes() {
   return apiFetch<DocumentType[]>(full("/api/document-types"));
 }
 
-/* ── Search areas (reutiliza endpoint de areas) ── */
-export async function apiSearchAreas(
+/* ── Search work areas ── */
+export async function apiSearchWorkAreas(
   q: string
 ): Promise<{ value: string; label: string }[]> {
   const sp = new URLSearchParams();
   const qTrim = q.trim();
   if (qTrim) sp.set("q", qTrim);
 
-  const res = await fetch(full(`/api/areas/search?${sp.toString()}`), {
+  const res = await fetch(full(`/api/work-areas/search?${sp.toString()}`), {
     credentials: "include",
     cache: "no-store",
   });
 
-  if (!res.ok) throw new Error("Error buscando áreas");
+  if (!res.ok) throw new Error("Error buscando áreas de trabajo");
   const data = await res.json();
   return (Array.isArray(data) ? data : []).map((x: any) => ({
-    value: String(x.id),
+    value: String(x.id ?? x.value),
     label: String(x.label ?? x.name),
   }));
 }

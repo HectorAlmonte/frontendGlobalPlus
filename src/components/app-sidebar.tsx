@@ -305,7 +305,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="flex items-center justify-center">
             <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
               <Image
-                src="/logo/logo.png"
+                src="/logo/logo-solo-icono.png"
                 alt="Global Plus"
                 width={22}
                 height={22}
@@ -318,7 +318,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="flex items-center gap-3 px-1">
             <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
               <Image
-                src="/logo/logo.png"
+                src="/logo/logo-solo-icono.png"
                 alt="Global Plus"
                 width={22}
                 height={22}

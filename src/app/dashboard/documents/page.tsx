@@ -103,7 +103,7 @@ export default function DocumentsPage() {
       await apiCreateDocument({
         name: input.name,
         documentTypeId: input.documentTypeId,
-        areaId: input.areaId,
+        workAreaId: input.workAreaId,
         moduleKey: input.moduleKey === "__none" ? "" : input.moduleKey,
         notes: input.notes,
         file: input.file,

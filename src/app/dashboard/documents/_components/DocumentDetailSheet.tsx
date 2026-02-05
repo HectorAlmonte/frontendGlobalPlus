@@ -256,9 +256,13 @@ export default function DocumentDetailSheet({
                           <p className="font-medium">{detail.code}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Área</p>
+                          <p className="text-xs text-muted-foreground">
+                            Área de trabajo
+                          </p>
                           <p className="font-medium">
-                            {detail.area?.name ?? "\u2014"}
+                            {detail.workArea
+                              ? `${detail.workArea.name} (${detail.workArea.code})`
+                              : "\u2014"}
                           </p>
                         </div>
                         <div>

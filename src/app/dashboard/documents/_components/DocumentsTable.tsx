@@ -64,7 +64,7 @@ export default function DocumentsTable({
           x.name.toLowerCase().includes(needle) ||
           x.code.toLowerCase().includes(needle) ||
           (x.documentType?.name ?? "").toLowerCase().includes(needle) ||
-          (x.area?.name ?? "").toLowerCase().includes(needle) ||
+          (x.workArea?.name ?? "").toLowerCase().includes(needle) ||
           (x.moduleKey ?? "").toLowerCase().includes(needle)
       );
     }
@@ -150,7 +150,7 @@ export default function DocumentsTable({
               <th className="px-3 py-2">Código</th>
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Área</th>
+              <th className="px-3 py-2">Área de trabajo</th>
               <th className="px-3 py-2">Versión</th>
               <th className="px-3 py-2">Vigencia</th>
               <th className="px-3 py-2">Estado</th>
@@ -204,7 +204,9 @@ export default function DocumentsTable({
                   </td>
 
                   <td className="px-3 py-2 text-xs">
-                    {doc.area?.name ?? "\u2014"}
+                    {doc.workArea
+                      ? `${doc.workArea.name} (${doc.workArea.code})`
+                      : "\u2014"}
                   </td>
 
                   <td className="px-3 py-2 text-xs font-medium">
