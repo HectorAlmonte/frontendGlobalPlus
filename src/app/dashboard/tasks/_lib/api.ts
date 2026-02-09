@@ -45,6 +45,7 @@ export function apiListTasks(params?: {
   priority?: TaskPriority;
   includeDeleted?: boolean;
   period?: TaskPeriod;
+  workAreaId?: string;
 }) {
   const sp = new URLSearchParams();
   if (params?.q) sp.set("q", params.q);
@@ -54,6 +55,7 @@ export function apiListTasks(params?: {
     sp.set("includeDeleted", params.includeDeleted ? "1" : "0");
   if (params?.period && params.period !== "all")
     sp.set("period", params.period);
+  if (params?.workAreaId) sp.set("workAreaId", params.workAreaId);
 
   return apiFetch<TaskRow[]>(full(`/api/tasks?${sp.toString()}`));
 }
@@ -106,11 +108,60 @@ export function apiRemoveAssignee(taskId: string, employeeId: string) {
 }
 
 /* ── Sub-items ── */
-export function apiAddSubItem(taskId: string, title: string) {
+export async function apiAddSubItem(
+  taskId: string,
+  title: string,
+  file?: File
+): Promise<TaskSubItem> {
+  if (file) {
+    const fd = new FormData();
+    fd.append("title", title);
+    fd.append("file", file);
+    const res = await fetch(full(`/api/tasks/${taskId}/subitems`), {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    if (!res.ok) {
+      let msg = "Error al agregar subtarea";
+      try {
+        const d = await res.json();
+        msg = d?.message || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
   return apiFetch<TaskSubItem>(full(`/api/tasks/${taskId}/subitems`), {
     method: "POST",
     body: JSON.stringify({ title }),
   });
+}
+
+export async function apiUploadSubItemFile(
+  taskId: string,
+  subItemId: string,
+  file: File
+): Promise<TaskSubItem> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(
+    full(`/api/tasks/${taskId}/subitems/${subItemId}/file`),
+    { method: "POST", credentials: "include", body: fd }
+  );
+  if (!res.ok) {
+    let msg = "Error al subir archivo";
+    try {
+      const d = await res.json();
+      msg = d?.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export function getSubItemFileUrl(taskId: string, subItemId: string): string {
+  return full(`/api/tasks/${taskId}/subitems/${subItemId}/file`);
 }
 
 export function apiToggleSubItem(taskId: string, subItemId: string) {
@@ -153,6 +204,27 @@ export async function apiSearchIncidents(
   return (Array.isArray(data) ? data : []).map((x: any) => ({
     value: String(x.id),
     label: String(x.title || x.code || x.id),
+  }));
+}
+
+/* ── Search work areas ── */
+export async function apiSearchWorkAreas(
+  q: string
+): Promise<{ value: string; label: string }[]> {
+  const sp = new URLSearchParams();
+  const qTrim = q.trim();
+  if (qTrim) sp.set("q", qTrim);
+
+  const res = await fetch(full(`/api/work-areas/search?${sp.toString()}`), {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error("Error buscando áreas de trabajo");
+  const data = await res.json();
+  return (Array.isArray(data) ? data : []).map((x: any) => ({
+    value: String(x.id ?? x.value),
+    label: String(x.name ?? x.label),
   }));
 }
 

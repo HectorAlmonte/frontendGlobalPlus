@@ -25,15 +25,8 @@ import {
 import SearchSelect from "@/app/dashboard/incidents/_components/SearchSelect";
 
 import type { DocumentType, CreateDocumentInput } from "../_lib/types";
-import { apiSearchWorkAreas } from "../_lib/api";
-
-const MODULE_OPTIONS = [
-  { value: "", label: "Ninguno" },
-  { value: "INCIDENTS", label: "Incidencias" },
-  { value: "INSPECTIONS", label: "Inspecciones" },
-  { value: "TRAININGS", label: "Capacitaciones" },
-  { value: "AUDITS", label: "Auditorías" },
-];
+import { apiSearchWorkAreasRaw } from "../_lib/api";
+import { MODULE_OPTIONS } from "../_lib/utils";
 
 const initialState: CreateDocumentInput = {
   name: "",
@@ -42,6 +35,9 @@ const initialState: CreateDocumentInput = {
   moduleKey: "",
   notes: "",
   file: null,
+  validFrom: "",
+  validUntil: "",
+  code: "",
 };
 
 type Props = {
@@ -61,25 +57,68 @@ export default function CreateDocumentDialog({
 }: Props) {
   const [form, setForm] = useState<CreateDocumentInput>(initialState);
 
+  // Cache de work area codes para preview
+  const [waCodeMap, setWaCodeMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
-    if (!open) setForm(initialState);
+    if (!open) {
+      setForm(initialState);
+      setWaCodeMap({});
+      setCodeManuallyEdited(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Archivo es OPCIONAL ahora
+  const datesValid =
+    Boolean(form.validFrom) &&
+    Boolean(form.validUntil) &&
+    form.validUntil >= form.validFrom;
 
   const canSubmit =
     form.name.trim().length > 0 &&
     Boolean(form.documentTypeId) &&
     Boolean(form.workAreaId) &&
-    form.file !== null;
+    datesValid;
 
   async function handleSubmit() {
     if (!canSubmit) return;
     await onCreate(form);
   }
 
-  const safeSearchWorkAreas = async (q: string) => {
+  // Fetcher que cachea los codes
+  const safeSearchWorkAreas = async (
+    q: string
+  ): Promise<{ value: string; label: string }[]> => {
     if (creating) return [];
-    return apiSearchWorkAreas(q);
+    const items = await apiSearchWorkAreasRaw(q);
+    // Cachear codes
+    const map: Record<string, string> = {};
+    items.forEach((it) => {
+      map[it.value] = it.code;
+    });
+    setWaCodeMap((prev) => ({ ...prev, ...map }));
+    return items;
   };
+
+  // Auto-rellenar código cuando cambian área de trabajo o tipo de documento
+  const selectedDocType = documentTypes.find(
+    (dt) => dt.id === form.documentTypeId
+  );
+  const workAreaCode = waCodeMap[form.workAreaId] ?? "";
+
+  // Bandera para saber si el usuario ya editó el código manualmente
+  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
+
+  useEffect(() => {
+    if (codeManuallyEdited) return;
+    if (workAreaCode && selectedDocType?.code) {
+      setForm((p) => ({
+        ...p,
+        code: `${workAreaCode}-${selectedDocType.code}-01`,
+      }));
+    }
+  }, [workAreaCode, selectedDocType?.code, codeManuallyEdited]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,7 +183,7 @@ export default function CreateDocumentDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {MODULE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "__none"} value={opt.value || "__none"}>
+                      <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -164,6 +203,50 @@ export default function CreateDocumentDialog({
                 />
               </div>
 
+              {/* Vigencia */}
+              <div className="space-y-2">
+                <Label>Vigente desde *</Label>
+                <Input
+                  type="date"
+                  value={form.validFrom}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, validFrom: e.target.value }))
+                  }
+                  disabled={creating}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Vigente hasta *</Label>
+                <Input
+                  type="date"
+                  value={form.validUntil}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, validUntil: e.target.value }))
+                  }
+                  disabled={creating}
+                />
+              </div>
+
+              {/* Código del documento (editable) */}
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Código del documento (opcional)</Label>
+                <Input
+                  value={form.code}
+                  onChange={(e) => {
+                    setCodeManuallyEdited(true);
+                    setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }));
+                  }}
+                  placeholder="Ej: SST-REG-01"
+                  className="font-mono tracking-wide"
+                  disabled={creating}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se sugiere automáticamente al seleccionar tipo y área. Puedes editarlo a tu gusto.
+                  {!form.code && " Si lo dejas vacío, se generará automáticamente."}
+                </p>
+              </div>
+
               <div className="space-y-2 sm:col-span-2">
                 <Label>Notas (opcional)</Label>
                 <Textarea
@@ -179,7 +262,7 @@ export default function CreateDocumentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Archivo PDF</Label>
+              <Label>Archivo PDF (opcional)</Label>
               <Input
                 type="file"
                 accept=".pdf"
@@ -195,7 +278,7 @@ export default function CreateDocumentDialog({
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Selecciona el archivo PDF de la primera versión.
+                  Puedes adjuntar el PDF ahora o subirlo después como nueva versión.
                 </p>
               )}
             </div>
@@ -219,8 +302,14 @@ export default function CreateDocumentDialog({
 
             {!canSubmit && (
               <p className="text-xs text-muted-foreground">
-                Para crear, completa: <b>Nombre</b>, <b>Tipo</b>, <b>Área de trabajo</b> y{" "}
-                <b>Archivo PDF</b>.
+                Para crear, completa: <b>Nombre</b>, <b>Tipo</b>,{" "}
+                <b>Área de trabajo</b>, <b>Vigente desde</b> y{" "}
+                <b>Vigente hasta</b>.
+                {form.validFrom && form.validUntil && form.validUntil < form.validFrom && (
+                  <span className="text-destructive block mt-1">
+                    La fecha &quot;Vigente hasta&quot; debe ser igual o posterior a &quot;Vigente desde&quot;.
+                  </span>
+                )}
               </p>
             )}
           </div>

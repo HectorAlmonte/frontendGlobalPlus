@@ -1,15 +1,83 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Pretitle from '@/components/landing/basicComponents/Pretitle'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 import { PiPhoneFill, PiEnvelopeFill, PiMapPinFill } from 'react-icons/pi'
 
+interface ContactForm {
+  name: string
+  phone: string
+  email: string
+  subject: string
+  message: string
+}
+
 const Contact = () => {
+  const [formData, setFormData] = useState<ContactForm>({
+    name: '',
+    phone: '',
+    email: '',
+    subject: '',
+    message: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleInputChange = (field: keyof ContactForm) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validación básica
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error('Por favor completa los campos obligatorios')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (response.ok) {
+        toast.success('Mensaje enviado correctamente. Nos pondremos en contacto pronto.')
+        // Resetear formulario
+        setFormData({
+          name: '',
+          phone: '',
+          email: '',
+          subject: '',
+          message: ''
+        })
+      } else {
+        const error = await response.json()
+        toast.error(error.message || 'Error al enviar el mensaje')
+      }
+    } catch (error) {
+      console.error('Error sending contact form:', error)
+      toast.error('Error de conexión. Por favor intenta nuevamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
   return (
     <section id="contact" className="py-16 sm:py-20 xl:py-28 bg-muted/30">
       <div className="container mx-auto px-5 sm:px-8 max-w-6xl">
@@ -92,7 +160,7 @@ const Contact = () => {
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
             className="rounded-2xl border border-border bg-white p-6 sm:p-7 shadow-sm"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={handleSubmit}
           >
             <h3 className="text-xl font-extrabold text-primary">
               Envíanos un mensaje
@@ -103,23 +171,46 @@ const Contact = () => {
 
             <div className="mt-6 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input placeholder="Nombre completo" />
-                <Input placeholder="Teléfono" />
+                <Input 
+                  placeholder="Nombre completo" 
+                  value={formData.name}
+                  onChange={handleInputChange('name')}
+                  required
+                />
+                <Input 
+                  placeholder="Teléfono" 
+                  value={formData.phone}
+                  onChange={handleInputChange('phone')}
+                />
               </div>
 
-              <Input placeholder="Correo corporativo" type="email" />
-              <Input placeholder="Asunto" />
+              <Input 
+                placeholder="Correo corporativo" 
+                type="email" 
+                value={formData.email}
+                onChange={handleInputChange('email')}
+                required
+              />
+              <Input 
+                placeholder="Asunto" 
+                value={formData.subject}
+                onChange={handleInputChange('subject')}
+              />
 
               <Textarea
                 placeholder="Cuéntanos brevemente sobre tu operación o necesidad"
                 className="min-h-[140px]"
+                value={formData.message}
+                onChange={handleInputChange('message')}
+                required
               />
 
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="mt-2 w-full sm:w-auto px-8 font-semibold"
               >
-                Enviar mensaje
+                {isSubmitting ? 'Enviando...' : 'Enviar mensaje'}
               </Button>
             </div>
           </motion.form>

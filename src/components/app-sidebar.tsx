@@ -144,6 +144,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return iconMap[iconName] ?? CircleDot;
   };
 
+  // Auto-cerrar sidebar en mobile al navegar
+  React.useEffect(() => {
+    if (isMobile) setOpenMobile(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   React.useEffect(() => {
     if (loadingUser) return;
 

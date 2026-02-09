@@ -95,6 +95,9 @@ export type CreateDocumentInput = {
   moduleKey: string;
   notes: string;
   file: File | null;
+  validFrom: string;
+  validUntil: string;
+  code: string;
 };
 
 /**

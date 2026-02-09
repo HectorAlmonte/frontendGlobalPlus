@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Check, Loader2, X, Plus } from "lucide-react";
+import { Check, Loader2, X, Plus, Paperclip, ImagePlus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import SearchSelect from "@/app/dashboard/incidents/_components/SearchSelect";
 
 import type { TaskRow, TaskStatus, TaskPriority } from "../_lib/types";
 import {
   apiCreateTask,
   apiUpdateTask,
+  apiAddSubItem,
   apiSearchEmployees,
   apiSearchIncidents,
+  apiSearchWorkAreas,
 } from "../_lib/api";
 
 /* ── Generic inline search ── */
@@ -161,6 +164,9 @@ function InlineSearch({
   );
 }
 
+/* ── SubItem type for creation ── */
+type SubItemDraft = { title: string; file: File | null };
+
 /* ── Form Modal ── */
 type Props = {
   open: boolean;
@@ -195,6 +201,12 @@ export default function TaskFormModal({
     editing?.incident?.title ?? ""
   );
 
+  // Área de trabajo
+  const [workAreaId, setWorkAreaId] = useState(editing?.workAreaId ?? "");
+  const [workAreaLabel, setWorkAreaLabel] = useState(
+    editing?.workArea?.name ?? ""
+  );
+
   // Asignados
   const [assignees, setAssignees] = useState<{ id: string; label: string }[]>(
     () =>
@@ -205,20 +217,25 @@ export default function TaskFormModal({
   );
 
   // Subtareas (solo al crear)
-  const [subItems, setSubItems] = useState<string[]>([]);
+  const [subItems, setSubItems] = useState<SubItemDraft[]>([]);
   const [newSubItem, setNewSubItem] = useState("");
+  const [newSubFile, setNewSubFile] = useState<File | null>(null);
+  const subFileInputRef = useRef<HTMLInputElement>(null);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchEmployees = useCallback((q: string) => apiSearchEmployees(q), []);
   const fetchIncidents = useCallback((q: string) => apiSearchIncidents(q), []);
+  const fetchWorkAreas = useCallback((q: string) => apiSearchWorkAreas(q), []);
 
   const addSubItem = () => {
     const trimmed = newSubItem.trim();
     if (!trimmed) return;
-    setSubItems((prev) => [...prev, trimmed]);
+    setSubItems((prev) => [...prev, { title: trimmed, file: newSubFile }]);
     setNewSubItem("");
+    setNewSubFile(null);
+    if (subFileInputRef.current) subFileInputRef.current.value = "";
   };
 
   const removeSubItem = (idx: number) => {
@@ -254,25 +271,47 @@ export default function TaskFormModal({
           priority,
           dueDate: dueDate || null,
           incidentId: incidentId || null,
+          workAreaId: workAreaId || null,
         });
       } else {
         // Auto-agregar subtarea pendiente en el input
         const finalSubItems = [...subItems];
         const pendingSub = newSubItem.trim();
         if (pendingSub) {
-          finalSubItems.push(pendingSub);
+          finalSubItems.push({ title: pendingSub, file: newSubFile });
           setNewSubItem("");
+          setNewSubFile(null);
         }
 
-        await apiCreateTask({
-          title: trimmedTitle,
-          description: description.trim() || undefined,
-          priority,
-          dueDate: dueDate || null,
-          incidentId: incidentId || null,
-          assignees: assignees.map((a) => a.id),
-          subItems: finalSubItems.map((s) => ({ title: s })),
-        });
+        const hasFiles = finalSubItems.some((s) => s.file !== null);
+
+        if (hasFiles) {
+          // Crear tarea sin subtareas, luego agregarlas individualmente con archivos
+          const task = await apiCreateTask({
+            title: trimmedTitle,
+            description: description.trim() || undefined,
+            priority,
+            dueDate: dueDate || null,
+            incidentId: incidentId || null,
+            workAreaId: workAreaId || null,
+            assignees: assignees.map((a) => a.id),
+          });
+
+          for (const sub of finalSubItems) {
+            await apiAddSubItem(task.id, sub.title, sub.file ?? undefined);
+          }
+        } else {
+          await apiCreateTask({
+            title: trimmedTitle,
+            description: description.trim() || undefined,
+            priority,
+            dueDate: dueDate || null,
+            incidentId: incidentId || null,
+            workAreaId: workAreaId || null,
+            assignees: assignees.map((a) => a.id),
+            subItems: finalSubItems.map((s) => ({ title: s.title })),
+          });
+        }
       }
 
       onSuccess();
@@ -360,6 +399,21 @@ export default function TaskFormModal({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+
+            {/* Área de trabajo */}
+            <div className="space-y-2">
+              <Label>Área de trabajo (opcional)</Label>
+              <SearchSelect
+                value={workAreaId}
+                onChange={(id) => setWorkAreaId(id)}
+                placeholder="Seleccionar área..."
+                searchPlaceholder="Buscar área de trabajo..."
+                emptyText="No se encontraron áreas"
+                fetcher={fetchWorkAreas}
+                selectedLabel={workAreaLabel}
+                allowClear
               />
             </div>
 
@@ -454,11 +508,19 @@ export default function TaskFormModal({
                         key={i}
                         className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
                       >
-                        <span className="flex-1">{s}</span>
+                        <span className="flex-1 truncate">{s.title}</span>
+                        {s.file && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                            <Paperclip className="h-3 w-3" />
+                            {s.file.name.length > 15
+                              ? s.file.name.slice(0, 12) + "..."
+                              : s.file.name}
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeSubItem(i)}
-                          className="text-muted-foreground hover:text-foreground"
+                          className="text-muted-foreground hover:text-foreground shrink-0"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -477,6 +539,25 @@ export default function TaskFormModal({
                       (e.preventDefault(), addSubItem())
                     }
                   />
+                  <input
+                    ref={subFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      setNewSubFile(e.target.files?.[0] ?? null)
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => subFileInputRef.current?.click()}
+                    className={cn(newSubFile && "border-primary text-primary")}
+                    title={newSubFile ? newSubFile.name : "Adjuntar imagen"}
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -486,6 +567,24 @@ export default function TaskFormModal({
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+
+                {newSubFile && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" />
+                    {newSubFile.name}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewSubFile(null);
+                        if (subFileInputRef.current)
+                          subFileInputRef.current.value = "";
+                      }}
+                      className="ml-1 hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </p>
+                )}
               </div>
             )}
           </div>

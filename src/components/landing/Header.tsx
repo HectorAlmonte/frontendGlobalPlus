@@ -1,29 +1,40 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Link as ScrollLink } from "react-scroll"
 import { RiArrowRightUpLine } from "react-icons/ri"
 import { useRouter } from "next/navigation"
 import Logo from "@/components/landing/Logo"
 import NavMobile from "@/components/landing/NavMobile"
+import LandingButton from "./ui/LandingButton"
+import { throttle } from "./utils/throttle"
 
-const links = [
+interface NavLink {
+  name: string;
+  path: string;
+}
+
+const links: NavLink[] = [
   { name: "Inicio", path: "home" },
   { name: "Nosotros", path: "about" },
   { name: "Servicios", path: "services" },
   { name: "Contacto", path: "contact" },
 ]
 
-const Header = () => {
+const Header: React.FC = () => {
   const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
+  const handleScroll = useCallback(() => {
+    setScrolled(window.scrollY > 20)
   }, [])
+
+  useEffect(() => {
+    const throttledScroll = throttle(handleScroll, 100)
+    throttledScroll()
+    window.addEventListener("scroll", throttledScroll, { passive: true })
+    return () => window.removeEventListener("scroll", throttledScroll)
+  }, [handleScroll])
 
   const handleClick = () => router.push("/login")
 
@@ -66,19 +77,19 @@ const Header = () => {
                 </ul>
               </nav>
 
-              <button
-                type="button"
+              <LandingButton
+                variant="secondary"
+                size="md"
                 onClick={handleClick}
-                className="group relative h-[46px] min-w-[190px] inline-flex items-center justify-center rounded-full bg-white text-primary border border-white/30 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md active:translate-y-0 overflow-hidden"
-              >
-                <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-linear-to-r from-transparent via-black/5 to-transparent" />
-                <span className="relative flex items-center gap-3 px-5">
-                  <span className="tracking-[1.2px] font-primary font-extrabold text-[13px] uppercase">Sistema</span>
+                className="min-w-[190px]"
+                icon={
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-primary transition-transform duration-200 group-hover:rotate-6">
                     <RiArrowRightUpLine className="text-white text-lg group-hover:rotate-45 transition-transform duration-200" />
                   </span>
-                </span>
-              </button>
+                }
+              >
+                Sistema
+              </LandingButton>
             </div>
 
             <div className="xl:hidden">

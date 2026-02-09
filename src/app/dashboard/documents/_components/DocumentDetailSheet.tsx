@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 import {
   Sheet,
@@ -14,9 +15,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle, Trash2 } from "lucide-react";
 
-import type { DocumentDetail, DocumentVersion } from "../_lib/types";
+import type { DocumentDetail, DocumentType, DocumentVersion } from "../_lib/types";
 import {
   statusBadge,
   formatDate,
@@ -26,7 +37,7 @@ import {
 import { apiDownloadVersion } from "../_lib/api";
 
 import NewVersionDialog from "./NewVersionDialog";
-import EditDocumentDialog from "./EditDocumentDialog";
+import EditDocumentDialog, { type EditDocumentInput } from "./EditDocumentDialog";
 
 type Props = {
   open: boolean;
@@ -41,11 +52,14 @@ type Props = {
 
   isAdmin: boolean;
 
+  documentTypes: DocumentType[];
+
   onNewVersion: (docId: string, file: File, notes?: string) => Promise<void>;
   onEditDocument: (
     docId: string,
-    input: { name?: string; moduleKey?: string }
+    input: EditDocumentInput
   ) => Promise<void>;
+  onDeleteDocument: (docId: string) => Promise<void>;
 };
 
 function pickFullName(u: any) {
@@ -64,14 +78,19 @@ export default function DocumentDetailSheet({
   detail,
   onReload,
   isAdmin,
+  documentTypes,
   onNewVersion,
   onEditDocument,
+  onDeleteDocument,
 }: Props) {
   const [newVersionOpen, setNewVersionOpen] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
 
   const [editOpen, setEditOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
 
   const [downloading, setDownloading] = React.useState<string | null>(null);
 
@@ -95,7 +114,7 @@ export default function DocumentDetailSheet({
   );
 
   const handleEdit = React.useCallback(
-    async (input: { name?: string; moduleKey?: string }) => {
+    async (input: EditDocumentInput) => {
       if (!detail) return;
       setSaving(true);
       try {
@@ -111,10 +130,24 @@ export default function DocumentDetailSheet({
     [detail, onEditDocument, onReload]
   );
 
+  const handleDelete = React.useCallback(async () => {
+    if (!detail) return;
+    setDeleting(true);
+    try {
+      await onDeleteDocument(detail.id);
+      setDeleteOpen(false);
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeleting(false);
+    }
+  }, [detail, onDeleteDocument, onOpenChange]);
+
   const handleDownload = React.useCallback(
     async (version: DocumentVersion) => {
       if (version.isExpired) {
-        alert("Esta versión está expirada. No se puede descargar.");
+        toast.error("Esta versión está expirada. No se puede descargar.");
         return;
       }
       setDownloading(version.id);
@@ -128,8 +161,9 @@ export default function DocumentDetailSheet({
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+        toast.success("Archivo descargado");
       } catch (e: any) {
-        alert(e?.message || "Error al descargar");
+        toast.error(e?.message || "Error al descargar el archivo");
       } finally {
         setDownloading(null);
       }
@@ -183,6 +217,16 @@ export default function DocumentDetailSheet({
                       className={btnInteractive}
                     >
                       Nueva versión
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      onClick={() => setDeleteOpen(true)}
+                      disabled={!detail || detailLoading}
+                      className={btnInteractive}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Eliminar
                     </Button>
                   </>
                 )}
@@ -278,7 +322,9 @@ export default function DocumentDetailSheet({
                             Versión actual
                           </p>
                           <p className="font-medium">
-                            v{detail.currentVersion?.versionNumber ?? 0}
+                            {detail.currentVersion
+                              ? `v${detail.currentVersion.versionNumber}`
+                              : <span className="text-muted-foreground italic">Sin versión</span>}
                           </p>
                         </div>
                       </div>
@@ -428,10 +474,42 @@ export default function DocumentDetailSheet({
           onOpenChange={setEditOpen}
           saving={saving}
           onSave={handleEdit}
+          documentTypes={documentTypes}
           initialName={detail.name}
+          initialCode={detail.code}
+          initialDocumentTypeId={detail.documentType?.id ?? ""}
+          initialWorkAreaId={detail.workArea?.id ?? ""}
+          initialWorkAreaLabel={
+            detail.workArea
+              ? `${detail.workArea.name} (${detail.workArea.code})`
+              : ""
+          }
           initialModuleKey={detail.moduleKey}
         />
       )}
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas eliminar el documento{" "}
+              <strong>{detail?.name}</strong>? Esta acción no se puede deshacer
+              y se eliminarán todas sus versiones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

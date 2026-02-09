@@ -14,8 +14,13 @@ import {
   Hash,
   Briefcase,
   AlignLeft,
+  ImagePlus,
+  Paperclip,
+  Maximize2,
+  MapPin,
 } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,6 +40,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -43,13 +52,15 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-import type { TaskRow, TaskStatus, TaskPriority } from "../_lib/types";
+import type { TaskRow, TaskStatus, TaskPriority, TaskSubItem } from "../_lib/types";
 import {
   apiGetTask,
   apiUpdateTask,
   apiAddSubItem,
   apiToggleSubItem,
   apiDeleteSubItem,
+  apiUploadSubItemFile,
+  getSubItemFileUrl,
   apiAddAssignees,
   apiRemoveAssignee,
   apiSearchEmployees,
@@ -63,7 +74,7 @@ const PRIORITY_LABELS: Record<TaskPriority, string> = {
 };
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return "\u2014";
   return new Date(d).toLocaleDateString("es-PE", {
     day: "2-digit",
     month: "short",
@@ -71,7 +82,72 @@ function formatDate(d: string | null) {
   });
 }
 
-/* ── Inline employee search (SIN CAMBIOS EN LÓGICA) ── */
+/* ── Sub-item file image preview ── */
+function SubItemImage({
+  taskId,
+  subItem,
+  onViewFull,
+}: {
+  taskId: string;
+  subItem: TaskSubItem;
+  onViewFull: (src: string) => void;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+  const isImage = subItem.fileType?.startsWith("image/") ?? false;
+
+  useEffect(() => {
+    if (!isImage || !subItem.fileUrl) return;
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    fetch(getSubItemFileUrl(taskId, subItem.id), { credentials: "include" })
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [taskId, subItem.id, subItem.fileUrl, isImage]);
+
+  if (!subItem.fileUrl) return null;
+
+  if (isImage && src) {
+    return (
+      <button
+        onClick={() => onViewFull(src)}
+        className="relative mt-1.5 block group/img"
+        title="Ver imagen en grande"
+      >
+        <img
+          src={src}
+          alt={subItem.fileName ?? ""}
+          className="h-16 w-16 rounded-md object-cover border cursor-pointer hover:opacity-80 transition"
+        />
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition bg-black/30 rounded-md">
+          <Maximize2 className="h-4 w-4 text-white" />
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+      <Paperclip className="h-3 w-3" />
+      <span className="truncate max-w-[120px]">{subItem.fileName}</span>
+    </div>
+  );
+}
+
+/* ── Inline employee search ── */
 function InlineEmployeeAdd({ existingIds, onAdd }: { existingIds: string[]; onAdd: (id: string) => void }) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<{ value: string; label: string }[]>([]);
@@ -157,8 +233,11 @@ export default function TaskDetailSheet({ open, taskId, onClose, onChanged, onEd
   const [task, setTask] = useState<TaskRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [newSubTitle, setNewSubTitle] = useState("");
+  const [newSubFile, setNewSubFile] = useState<File | null>(null);
   const [addingSub, setAddingSub] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [fullImageSrc, setFullImageSrc] = useState<string | null>(null);
+  const subFileInputRef = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
     if (!taskId) return;
@@ -177,7 +256,7 @@ export default function TaskDetailSheet({ open, taskId, onClose, onChanged, onEd
     if (open && taskId) reload();
   }, [open, taskId, reload]);
 
-  /* ── Handlers (LÓGICA ORIGINAL PRESERVADA) ── */
+  /* ── Handlers ── */
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (!task || task.status === newStatus) return;
     try {
@@ -210,8 +289,10 @@ export default function TaskDetailSheet({ open, taskId, onClose, onChanged, onEd
     if (!task || !newSubTitle.trim()) return;
     try {
       setAddingSub(true);
-      await apiAddSubItem(task.id, newSubTitle.trim());
+      await apiAddSubItem(task.id, newSubTitle.trim(), newSubFile ?? undefined);
       setNewSubTitle("");
+      setNewSubFile(null);
+      if (subFileInputRef.current) subFileInputRef.current.value = "";
       await reload();
       onChanged();
     } finally {
@@ -219,201 +300,286 @@ export default function TaskDetailSheet({ open, taskId, onClose, onChanged, onEd
     }
   };
 
+  const handleUploadSubFile = async (subItemId: string, file: File) => {
+    if (!task) return;
+    try {
+      await apiUploadSubItemFile(task.id, subItemId, file);
+      await reload();
+    } catch (e: any) {
+      alert(e?.message || "Error al subir archivo");
+    }
+  };
+
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="sm:max-w-xl p-0 flex flex-col bg-background">
-        
-        {/* Header */}
-        <SheetHeader className="p-6 border-b space-y-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Hash className="h-4 w-4" />
-            <span className="text-xs font-mono uppercase tracking-wider">Tarea #{taskId?.slice(-6)}</span>
-          </div>
-          <SheetTitle className="text-2xl font-bold">{task?.title || "Cargando..."}</SheetTitle>
-          {task && !task.isDeleted && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => onEditClick(task)} className="h-8 shadow-sm">
-                <Pencil className="h-3.5 w-3.5 mr-2" />
-                Editar
-              </Button>
-              {task.status !== "COMPLETED" && (
-                <Button size="sm" onClick={() => handleStatusChange("COMPLETED")} disabled={changingStatus} className="h-8 gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {changingStatus ? "Guardando..." : "Completar"}
-                </Button>
-              )}
+    <>
+      <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+        <SheetContent className="sm:max-w-xl p-0 flex flex-col bg-background">
+
+          {/* Header */}
+          <SheetHeader className="p-6 border-b space-y-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Hash className="h-4 w-4" />
+              <span className="text-xs font-mono uppercase tracking-wider">Tarea #{taskId?.slice(-6)}</span>
             </div>
-          )}
-        </SheetHeader>
+            <SheetTitle className="text-2xl font-bold">{task?.title || "Cargando..."}</SheetTitle>
+            {task && !task.isDeleted && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => onEditClick(task)} className="h-8 shadow-sm">
+                  <Pencil className="h-3.5 w-3.5 mr-2" />
+                  Editar
+                </Button>
+                {task.status !== "COMPLETED" && (
+                  <Button size="sm" onClick={() => handleStatusChange("COMPLETED")} disabled={changingStatus} className="h-8 gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {changingStatus ? "Guardando..." : "Completar"}
+                  </Button>
+                )}
+              </div>
+            )}
+          </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          {loading && !task ? (
-            <div className="flex h-40 items-center justify-center text-muted-foreground"><Loader2 className="animate-spin mr-2" /> Cargando...</div>
-          ) : !task ? (
-            <p className="text-center py-10 text-muted-foreground">No se encontró la tarea.</p>
-          ) : (
-            <div className="p-6 space-y-8">
-              
-              {/* Grid de Información Principal */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">Estado</label>
-                  <Select value={task.status} onValueChange={(v) => handleStatusChange(v as TaskStatus)} disabled={changingStatus}>
-                    <SelectTrigger className="h-9 bg-muted/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PENDING">Pendiente</SelectItem>
-                      <SelectItem value="IN_PROGRESS">En progreso</SelectItem>
-                      <SelectItem value="COMPLETED">Completada</SelectItem>
-                      <SelectItem value="CANCELLED">Cancelada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading && !task ? (
+              <div className="flex h-40 items-center justify-center text-muted-foreground"><Loader2 className="animate-spin mr-2" /> Cargando...</div>
+            ) : !task ? (
+              <p className="text-center py-10 text-muted-foreground">No se encontró la tarea.</p>
+            ) : (
+              <div className="p-6 space-y-8">
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">Prioridad</label>
-                  <div className="h-9 flex items-center">
-                    <Badge 
-                      variant={task.priority === "ALTA" ? "destructive" : task.priority === "MEDIA" ? "outline" : "secondary"}
-                      className="rounded-md"
-                    >
-                      {PRIORITY_LABELS[task.priority]}
-                    </Badge>
+                {/* Grid de Información Principal */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">Estado</label>
+                    <Select value={task.status} onValueChange={(v) => handleStatusChange(v as TaskStatus)} disabled={changingStatus}>
+                      <SelectTrigger className="h-9 bg-muted/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PENDING">Pendiente</SelectItem>
+                        <SelectItem value="IN_PROGRESS">En progreso</SelectItem>
+                        <SelectItem value="COMPLETED">Completada</SelectItem>
+                        <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase">Vencimiento</p>
-                    <p className="text-sm font-medium">{formatDate(task.dueDate)}</p>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">Prioridad</label>
+                    <div className="h-9 flex items-center">
+                      <Badge
+                        variant={task.priority === "ALTA" ? "destructive" : task.priority === "MEDIA" ? "outline" : "secondary"}
+                        className="rounded-md"
+                      >
+                        {PRIORITY_LABELS[task.priority]}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase">Creador</p>
-                    <p className="text-sm font-medium truncate">
-                      {task.createdBy?.employee ? `${task.createdBy.employee.nombres}` : task.createdBy?.username}
-                    </p>
-                  </div>
-                </div>
-
-                {task.incident && (
-                  <div className="flex items-center gap-3 col-span-2">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase">Incidencia vinculada</p>
-                      <p className="text-sm font-medium">
-                        #{task.incident.number}: {task.incident.title || task.incident.id}
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase">Vencimiento</p>
+                      <p className="text-sm font-medium">{formatDate(task.dueDate)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase">Creador</p>
+                      <p className="text-sm font-medium truncate">
+                        {task.createdBy?.employee ? `${task.createdBy.employee.nombres}` : task.createdBy?.username}
                       </p>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Barra de progreso */}
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">Progreso</span>
-                <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      task.progress === 100
-                        ? "bg-green-500"
-                        : task.progress > 0
-                        ? "bg-primary"
-                        : "bg-muted"
-                    }`}
-                    style={{ width: `${task.progress}%` }}
+                  {task.workArea && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Área de trabajo</p>
+                        <p className="text-sm font-medium">{task.workArea.name} ({task.workArea.code})</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {task.incident && (
+                    <div className="flex items-center gap-3 col-span-2">
+                      <Hash className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Incidencia vinculada</p>
+                        <p className="text-sm font-medium">
+                          #{task.incident.number}: {task.incident.title || task.incident.id}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Barra de progreso */}
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">Progreso</span>
+                  <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        task.progress === 100
+                          ? "bg-green-500"
+                          : task.progress > 0
+                          ? "bg-primary"
+                          : "bg-muted"
+                      }`}
+                      style={{ width: `${task.progress}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold">{task.progress}%</span>
+                </div>
+
+                {/* Descripción */}
+                {task.description && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <AlignLeft className="h-4 w-4" /> Descripción
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed bg-muted/50 p-3 rounded-lg border italic">
+                      {task.description}
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Subtareas */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" /> Subtareas
+                    </h4>
+                    <Badge variant="secondary" className="text-[10px]">{task.subItems?.length || 0}</Badge>
+                  </div>
+
+                  <div className="space-y-2">
+                    {task.subItems?.map((sub) => (
+                      <div key={sub.id} className="group flex items-start gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <Checkbox checked={sub.isCompleted} onCheckedChange={() => handleToggleSub(sub.id)} className="mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-sm ${sub.isCompleted ? "line-through text-muted-foreground" : "font-medium"}`}>
+                            {sub.title}
+                          </span>
+                          {sub.isCompleted && sub.completedAt && (
+                            <p className="text-xs text-muted-foreground">
+                              Completada el {new Date(sub.completedAt).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                            </p>
+                          )}
+                          {/* Imagen / archivo de la subtarea */}
+                          <SubItemImage
+                            taskId={task.id}
+                            subItem={sub}
+                            onViewFull={(src) => setFullImageSrc(src)}
+                          />
+                        </div>
+
+                        {/* Botón subir/reemplazar imagen */}
+                        <label className="opacity-0 group-hover:opacity-100 cursor-pointer p-1 text-muted-foreground hover:text-primary shrink-0 transition-opacity" title="Subir imagen">
+                          <ImagePlus className="h-4 w-4" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUploadSubFile(sub.id, f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+
+                        <button onClick={() => handleDeleteSub(sub.id)} className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 shrink-0 transition-opacity">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Agregar nueva subtarea */}
+                    <div className="flex gap-2 pt-2">
+                      <Input
+                        value={newSubTitle}
+                        onChange={(e) => setNewSubTitle(e.target.value)}
+                        placeholder="Nueva subtarea..."
+                        className="h-9"
+                        onKeyDown={(e) => e.key === "Enter" && handleAddSub()}
+                      />
+                      <input
+                        ref={subFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setNewSubFile(e.target.files?.[0] ?? null)}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => subFileInputRef.current?.click()}
+                        className={cn("h-9", newSubFile && "border-primary text-primary")}
+                        title={newSubFile ? newSubFile.name : "Adjuntar imagen"}
+                      >
+                        <ImagePlus className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" onClick={handleAddSub} disabled={addingSub} className="h-9">
+                        {addingSub ? <Loader2 className="animate-spin" /> : <Plus className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {newSubFile && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Paperclip className="h-3 w-3" />
+                        {newSubFile.name}
+                        <button
+                          onClick={() => {
+                            setNewSubFile(null);
+                            if (subFileInputRef.current) subFileInputRef.current.value = "";
+                          }}
+                          className="ml-1 hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Asignados */}
+                <div className="space-y-4 pb-10">
+                  <h4 className="text-sm font-bold flex items-center gap-2">Equipo</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {task.assignees?.map((a) => (
+                      <Badge key={a.id} variant="outline" className="pl-1 pr-2 py-1 gap-2 bg-background shadow-sm">
+                        <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold">
+                          {a.employee.nombres[0]}
+                        </div>
+                        <span className="text-xs">{a.employee.nombres}</span>
+                        <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => apiRemoveAssignee(task.id, a.employeeId).then(reload)} />
+                      </Badge>
+                    ))}
+                  </div>
+                  <InlineEmployeeAdd
+                    existingIds={task.assignees?.map((a) => a.employeeId) ?? []}
+                    onAdd={(id) => { apiAddAssignees(task.id, [id]).then(reload); onChanged(); }}
                   />
                 </div>
-                <span className="text-sm font-semibold">{task.progress}%</span>
+
               </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
-              {/* Descripción */}
-              {task.description && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <AlignLeft className="h-4 w-4" /> Descripción
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed bg-muted/50 p-3 rounded-lg border italic">
-                    {task.description}
-                  </p>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* Subtareas */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" /> Subtareas
-                  </h4>
-                  <Badge variant="secondary" className="text-[10px]">{task.subItems?.length || 0}</Badge>
-                </div>
-
-                <div className="space-y-2">
-                  {task.subItems?.map((sub) => (
-                    <div key={sub.id} className="group flex items-start gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors">
-                      <Checkbox checked={sub.isCompleted} onCheckedChange={() => handleToggleSub(sub.id)} className="mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-sm ${sub.isCompleted ? "line-through text-muted-foreground" : "font-medium"}`}>
-                          {sub.title}
-                        </span>
-                        {sub.isCompleted && sub.completedAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Completada el {new Date(sub.completedAt).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                          </p>
-                        )}
-                      </div>
-                      <button onClick={() => handleDeleteSub(sub.id)} className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 shrink-0">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-
-                  <div className="flex gap-2 pt-2">
-                    <Input
-                      value={newSubTitle}
-                      onChange={(e) => setNewSubTitle(e.target.value)}
-                      placeholder="Nueva subtarea..."
-                      className="h-9"
-                      onKeyDown={(e) => e.key === "Enter" && handleAddSub()}
-                    />
-                    <Button size="sm" onClick={handleAddSub} disabled={addingSub} className="h-9">
-                      {addingSub ? <Loader2 className="animate-spin" /> : <Plus className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Asignados */}
-              <div className="space-y-4 pb-10">
-                <h4 className="text-sm font-bold flex items-center gap-2">Equipo</h4>
-                <div className="flex flex-wrap gap-2">
-                  {task.assignees?.map((a) => (
-                    <Badge key={a.id} variant="outline" className="pl-1 pr-2 py-1 gap-2 bg-background shadow-sm">
-                      <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold">
-                        {a.employee.nombres[0]}
-                      </div>
-                      <span className="text-xs">{a.employee.nombres}</span>
-                      <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => apiRemoveAssignee(task.id, a.employeeId).then(reload)} />
-                    </Badge>
-                  ))}
-                </div>
-                <InlineEmployeeAdd 
-                  existingIds={task.assignees?.map((a) => a.employeeId) ?? []} 
-                  onAdd={(id) => { console.log("Enviando ID:", id);apiAddAssignees(task.id, [id]).then(reload); onChanged(); }} 
-                />
-              </div>
-
-            </div>
+      {/* Dialog para ver imagen en grande */}
+      <Dialog open={!!fullImageSrc} onOpenChange={(v) => !v && setFullImageSrc(null)}>
+        <DialogContent className="max-w-3xl p-2">
+          {fullImageSrc && (
+            <img src={fullImageSrc} alt="" className="w-full h-auto rounded-md" />
           )}
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,7 @@ export default function DocumentsTable({
   );
 
   // Reset page when filters change
-  useMemo(() => { setPageIndex(0); }, [filtered.length, pageSize]);
+  useEffect(() => { setPageIndex(0); }, [filtered.length, pageSize]);
 
   return (
     <div className="space-y-3">
@@ -179,8 +179,8 @@ export default function DocumentsTable({
                     isExpired ? "bg-red-50/60" : ""
                   }`}
                 >
-                  <td className="px-3 py-2 font-mono font-medium text-primary">
-                    {doc.code}
+                  <td className="px-3 py-2 font-mono font-medium text-primary whitespace-nowrap">
+                    {doc.code || <span className="text-muted-foreground italic font-sans font-normal">Sin código</span>}
                   </td>
 
                   <td className="px-3 py-2">
@@ -210,17 +210,21 @@ export default function DocumentsTable({
                   </td>
 
                   <td className="px-3 py-2 text-xs font-medium">
-                    v{doc.currentVersion?.versionNumber ?? 0}
+                    {doc.currentVersion
+                      ? `v${doc.currentVersion.versionNumber}`
+                      : <span className="text-muted-foreground italic">Sin versión</span>}
                   </td>
 
                   <td className="px-3 py-2 text-xs">
                     {doc.currentVersion
                       ? `${formatDate(doc.currentVersion.validFrom)} - ${formatDate(doc.currentVersion.validUntil)}`
-                      : "\u2014"}
+                      : <span className="text-muted-foreground italic">Pendiente</span>}
                   </td>
 
                   <td className="px-3 py-2">
-                    {statusBadge(isExpired, doc.isActive)}
+                    {doc.currentVersion
+                      ? statusBadge(isExpired, doc.isActive)
+                      : <Badge variant="outline">Sin archivo</Badge>}
                   </td>
 
                   <td className="px-3 py-2 text-right">

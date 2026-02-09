@@ -15,14 +15,19 @@ import { Link as ScrollLink } from "react-scroll"
 import { useRouter } from "next/navigation"
 import Logo from "./Logo"
 
-const links = [
+interface NavLink {
+  name: string;
+  path: string;
+}
+
+const links: NavLink[] = [
   { name: "Inicio", path: "home" },
   { name: "Nosotros", path: "about" },
   { name: "Servicios", path: "services" },
   { name: "Contacto", path: "contact" },
 ]
 
-const NavMobile = () => {
+const NavMobile: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 

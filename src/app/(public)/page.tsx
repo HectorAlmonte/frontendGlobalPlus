@@ -1,28 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
+import dynamic from "next/dynamic";
 
-import About from "@/components/landing/About";
-import Contact from "@/components/landing/Contact";
-import Faq from "@/components/landing/Faq";
-import Footer from "@/components/landing/Footer";
 import Header from "@/components/landing/Header";
 import Hero from "@/components/landing/Hero";
-import Services from "@/components/landing/Services";
-import Stast from "@/components/landing/Stast";
-import Work from "@/components/landing/Work";
+import About from "@/components/landing/About";
+import { throttle } from "@/components/landing/utils/throttle";
+
+// Lazy loading para componentes below-fold
+const LazyStats = dynamic(() => import("@/components/landing/Stats"), {
+  loading: () => <div className="h-96 bg-muted animate-pulse" />,
+  ssr: false
+});
+
+const LazyServices = dynamic(() => import("@/components/landing/Services"), {
+  loading: () => <div className="h-96 bg-muted animate-pulse" />,
+  ssr: false
+});
+
+const LazyWork = dynamic(() => import("@/components/landing/Work"), {
+  loading: () => <div className="h-96 bg-muted animate-pulse" />,
+  ssr: false
+});
+
+const LazyFaq = dynamic(() => import("@/components/landing/Faq"), {
+  loading: () => <div className="h-96 bg-muted animate-pulse" />,
+  ssr: false
+});
+
+const LazyContact = dynamic(() => import("@/components/landing/Contact"), {
+  loading: () => <div className="h-96 bg-muted animate-pulse" />,
+  ssr: false
+});
+
+const LazyFooter = dynamic(() => import("@/components/landing/Footer"), {
+  loading: () => <div className="h-96 bg-muted animate-pulse" />,
+  ssr: false
+});
 
 export default function LandingPage() {
   const [headerActive, setHeaderActive] = useState(false);
-
   const { theme, resolvedTheme, setTheme } = useTheme();
 
-  useEffect(() => {
-    const handleScroll = () => setHeaderActive(window.scrollY > 200);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+  const handleScroll = useCallback(() => {
+    setHeaderActive(window.scrollY > 200);
   }, []);
+
+  useEffect(() => {
+    const throttledScroll = throttle(handleScroll, 100);
+    window.addEventListener("scroll", throttledScroll, { passive: true });
+    return () => window.removeEventListener("scroll", throttledScroll);
+  }, [handleScroll]);
 
   // ✅ Forzar light en landing, y restaurar el tema anterior al salir
   useEffect(() => {
@@ -39,7 +69,7 @@ export default function LandingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setTheme]);
 
-  return (
+return (
     <div>
       <div className="relative z-10">
         <Header />
@@ -53,14 +83,16 @@ export default function LandingPage() {
         <Header />
       </div>
 
+      <main>
         <Hero />
         <About />
-        <Stast />
-        <Services />
-        <Work />
-        <Faq />
-        <Contact />
-        <Footer />
+        <LazyStats />
+        <LazyServices />
+        <LazyWork />
+        <LazyFaq />
+        <LazyContact />
+        <LazyFooter />
+      </main>
     </div>
   );
 }

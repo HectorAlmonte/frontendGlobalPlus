@@ -45,3 +45,11 @@ export function moduleKeyLabel(key: string | null | undefined) {
   if (!key) return "\u2014";
   return MODULE_KEY_LABELS[key] ?? key;
 }
+
+export const MODULE_OPTIONS = [
+  { value: "__none", label: "Ninguno" },
+  { value: "INCIDENTS", label: "Incidencias" },
+  { value: "INSPECTIONS", label: "Inspecciones" },
+  { value: "TRAININGS", label: "Capacitaciones" },
+  { value: "AUDITS", label: "Auditorías" },
+];

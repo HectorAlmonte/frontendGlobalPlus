@@ -8,6 +8,10 @@ export type TaskSubItem = {
   order: number;
   completedAt: string | null;
   createdAt: string;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileType: string | null;
+  fileSize: number | null;
 };
 
 export type TaskAssignee = {
@@ -38,6 +42,12 @@ export type TaskRow = {
     title: string;
     status: string;
   } | null;
+  workAreaId: string | null;
+  workArea: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
   subItems: TaskSubItem[];
   assignees: TaskAssignee[];
   isDeleted: boolean;
@@ -57,6 +67,7 @@ export type TaskCreateInput = {
   priority?: TaskPriority;
   dueDate?: string | null;
   incidentId?: string | null;
+  workAreaId?: string | null;
   assignees?: string[];
   subItems?: { title: string }[];
 };
@@ -68,6 +79,7 @@ export type TaskUpdateInput = {
   priority?: TaskPriority;
   dueDate?: string | null;
   incidentId?: string | null;
+  workAreaId?: string | null;
 };
 
 export type TaskPeriod = "7d" | "15d" | "1m" | "1y" | "all";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import SearchSelect from "@/app/dashboard/incidents/_components/SearchSelect";
 
 import type { TaskRow, TaskStatus, TaskPriority, TaskPeriod } from "../_lib/types";
-import { apiListTasks, apiDeleteTask, apiRestoreTask } from "../_lib/api";
+import { apiListTasks, apiDeleteTask, apiRestoreTask, apiSearchWorkAreas } from "../_lib/api";
 
 /* ── Helpers de presentación ── */
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -54,7 +55,7 @@ const PRIORITY_VARIANT: Record<TaskPriority, "default" | "secondary" | "outline"
 };
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return "\u2014";
   return new Date(d).toLocaleDateString("es-PE", {
     day: "2-digit",
     month: "short",
@@ -84,6 +85,7 @@ export default function TasksTable({
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "ALL">("ALL");
+  const [workAreaFilter, setWorkAreaFilter] = useState("");
   const [includeDeleted, setIncludeDeleted] = useState(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -102,6 +104,8 @@ export default function TasksTable({
 
   useEffect(() => setPageIndex(0), [rows, pageSize]);
 
+  const fetchWorkAreas = useCallback((q: string) => apiSearchWorkAreas(q), []);
+
   const load = async () => {
     try {
       setLoading(true);
@@ -111,6 +115,7 @@ export default function TasksTable({
         priority: priorityFilter !== "ALL" ? priorityFilter : undefined,
         includeDeleted: includeDeleted || undefined,
         period,
+        workAreaId: workAreaFilter || undefined,
       });
       setRows(data);
     } catch (e: any) {
@@ -205,6 +210,18 @@ export default function TasksTable({
             </SelectContent>
           </Select>
 
+          <div className="w-full sm:w-[180px]">
+            <SearchSelect
+              value={workAreaFilter}
+              onChange={(id) => setWorkAreaFilter(id)}
+              placeholder="Área de trabajo"
+              searchPlaceholder="Buscar área..."
+              emptyText="Sin áreas"
+              fetcher={fetchWorkAreas}
+              allowClear
+            />
+          </div>
+
           <Button
             size="sm"
             variant="outline"
@@ -227,6 +244,9 @@ export default function TasksTable({
         <span>
           {rows.length} resultado{rows.length !== 1 ? "s" : ""}
         </span>
+        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={load}>
+          Aplicar filtros
+        </Button>
       </div>
 
       <Separator />
@@ -237,6 +257,7 @@ export default function TasksTable({
           <thead className="bg-muted/40">
             <tr className="text-left">
               <th className="px-3 py-2">Título</th>
+              <th className="px-3 py-2">Área</th>
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">Prioridad</th>
               <th className="px-3 py-2">Progreso</th>
@@ -251,7 +272,7 @@ export default function TasksTable({
               <tr>
                 <td
                   className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={7}
+                  colSpan={8}
                 >
                   {loading ? "Cargando..." : "Sin tareas"}
                 </td>
@@ -282,6 +303,12 @@ export default function TasksTable({
                       Eliminada
                     </Badge>
                   )}
+                </td>
+
+                <td className="px-3 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    {t.workArea?.name ?? "\u2014"}
+                  </span>
                 </td>
 
                 <td className="px-3 py-2">

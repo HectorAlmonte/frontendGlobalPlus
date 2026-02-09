@@ -2,7 +2,11 @@ import Image from 'next/image'
 import React from 'react'
 import { Link as ScrollLink } from 'react-scroll'
 
-const Logo = () => {
+interface LogoProps {
+  className?: string;
+}
+
+const Logo: React.FC<LogoProps> = ({ className = "" }) => {
   return (
     <ScrollLink
       to="home"
@@ -10,7 +14,7 @@ const Logo = () => {
       spy
       offset={-90}
       duration={500}
-      className="cursor-pointer inline-flex items-center"
+      className={`cursor-pointer inline-flex items-center ${className}`}
       aria-label="Ir al inicio"
     >
       <Image

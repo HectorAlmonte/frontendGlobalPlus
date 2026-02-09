@@ -80,7 +80,10 @@ export async function apiCreateDocument(input: {
   workAreaId: string;
   moduleKey?: string;
   notes?: string;
-  file: File;
+  file?: File | null;
+  validFrom?: string;
+  validUntil?: string;
+  code?: string;
 }) {
   const fd = new FormData();
   fd.append("name", input.name);
@@ -88,7 +91,10 @@ export async function apiCreateDocument(input: {
   fd.append("workAreaId", input.workAreaId);
   if (input.moduleKey) fd.append("moduleKey", input.moduleKey);
   if (input.notes) fd.append("notes", input.notes);
-  fd.append("file", input.file);
+  if (input.file) fd.append("file", input.file);
+  if (input.validFrom) fd.append("validFrom", input.validFrom);
+  if (input.validUntil) fd.append("validUntil", input.validUntil);
+  if (input.code) fd.append("code", input.code);
 
   return apiFetchRaw(full("/api/documents"), {
     method: "POST",
@@ -99,7 +105,13 @@ export async function apiCreateDocument(input: {
 /* ── Update metadata ── */
 export function apiUpdateDocument(
   id: string,
-  input: { name?: string; moduleKey?: string }
+  input: {
+    name?: string;
+    moduleKey?: string;
+    code?: string;
+    documentTypeId?: string;
+    workAreaId?: string;
+  }
 ) {
   return apiFetch<DocumentRow>(full(`/api/documents/${id}`), {
     method: "PATCH",
@@ -181,5 +193,27 @@ export async function apiSearchWorkAreas(
   return (Array.isArray(data) ? data : []).map((x: any) => ({
     value: String(x.id ?? x.value),
     label: String(x.label ?? x.name),
+  }));
+}
+
+/* ── Search work areas (con code para preview) ── */
+export async function apiSearchWorkAreasRaw(
+  q: string
+): Promise<{ value: string; label: string; code: string }[]> {
+  const sp = new URLSearchParams();
+  const qTrim = q.trim();
+  if (qTrim) sp.set("q", qTrim);
+
+  const res = await fetch(full(`/api/work-areas/search?${sp.toString()}`), {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error("Error buscando áreas de trabajo");
+  const data = await res.json();
+  return (Array.isArray(data) ? data : []).map((x: any) => ({
+    value: String(x.id ?? x.value),
+    label: String(x.label ?? x.name),
+    code: String(x.code ?? ""),
   }));
 }

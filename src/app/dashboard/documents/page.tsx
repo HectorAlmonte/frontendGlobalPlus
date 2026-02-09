@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +22,7 @@ import {
   apiGetDocument,
   apiCreateDocument,
   apiUpdateDocument,
+  apiDeleteDocument,
   apiCreateNewVersion,
   apiListDocumentTypes,
 } from "./_lib/api";
@@ -52,8 +54,8 @@ export default function DocumentsPage() {
     try {
       const data = await apiListDocuments();
       setItems(data);
-    } catch (e) {
-      console.error("Error al listar documentos:", e);
+    } catch (e: any) {
+      toast.error(e?.message || "Error al listar documentos");
     } finally {
       setLoading(false);
     }
@@ -63,8 +65,8 @@ export default function DocumentsPage() {
     try {
       const data = await apiListDocumentTypes();
       setDocumentTypes(data);
-    } catch (e) {
-      console.error("Error al cargar tipos de documento:", e);
+    } catch (e: any) {
+      toast.error(e?.message || "Error al cargar tipos de documento");
     }
   }, []);
 
@@ -73,8 +75,8 @@ export default function DocumentsPage() {
     try {
       const data = await apiGetDocument(id);
       setDetail(data);
-    } catch (e) {
-      console.error("Error al ver detalle:", e);
+    } catch (e: any) {
+      toast.error(e?.message || "Error al cargar detalle del documento");
       setDetail(null);
     } finally {
       setDetailLoading(false);
@@ -97,7 +99,6 @@ export default function DocumentsPage() {
 
   /* ── Handlers ── */
   async function handleCreate(input: CreateDocumentInput) {
-    if (!input.file) return;
     setCreating(true);
     try {
       await apiCreateDocument({
@@ -106,28 +107,63 @@ export default function DocumentsPage() {
         workAreaId: input.workAreaId,
         moduleKey: input.moduleKey === "__none" ? "" : input.moduleKey,
         notes: input.notes,
-        file: input.file,
+        file: input.file ?? undefined,
+        validFrom: input.validFrom,
+        validUntil: input.validUntil,
+        code: input.code || undefined,
       });
       setOpenCreate(false);
+      toast.success("Documento creado correctamente");
       await fetchList();
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      toast.error(e?.message || "Error al crear documento");
     } finally {
       setCreating(false);
     }
   }
 
   async function handleNewVersion(docId: string, file: File, notes?: string) {
-    await apiCreateNewVersion(docId, file, notes);
-    await fetchList();
+    try {
+      await apiCreateNewVersion(docId, file, notes);
+      toast.success("Nueva versión subida correctamente");
+      await fetchList();
+    } catch (e: any) {
+      toast.error(e?.message || "Error al subir nueva versión");
+      throw e;
+    }
   }
 
   async function handleEditDocument(
     docId: string,
-    input: { name?: string; moduleKey?: string }
+    input: {
+      name?: string;
+      moduleKey?: string;
+      code?: string;
+      documentTypeId?: string;
+      workAreaId?: string;
+    }
   ) {
-    await apiUpdateDocument(docId, input);
-    await fetchList();
+    try {
+      await apiUpdateDocument(docId, input);
+      toast.success("Documento actualizado correctamente");
+      await fetchList();
+    } catch (e: any) {
+      toast.error(e?.message || "Error al actualizar documento");
+      throw e;
+    }
+  }
+
+  async function handleDeleteDocument(docId: string) {
+    try {
+      await apiDeleteDocument(docId);
+      setSelectedId(null);
+      setDetail(null);
+      toast.success("Documento eliminado correctamente");
+      await fetchList();
+    } catch (e: any) {
+      toast.error(e?.message || "Error al eliminar documento");
+      throw e;
+    }
   }
 
   return (
@@ -188,8 +224,10 @@ export default function DocumentsPage() {
         detail={detail}
         onReload={reloadDetail}
         isAdmin={isAdmin}
+        documentTypes={documentTypes}
         onNewVersion={handleNewVersion}
         onEditDocument={handleEditDocument}
+        onDeleteDocument={handleDeleteDocument}
       />
 
       {/* ===== CREAR DOCUMENTO ===== */}
