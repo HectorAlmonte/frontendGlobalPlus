@@ -40,8 +40,9 @@ import {
 } from "lucide-react";
 
 import CreateIncidentDialog from "../incidents/_components/CreateIncidentDialog";
-import type { CreateIncidentInput } from "../incidents/_lib/types";
-import { apiCreateIncident } from "../incidents/_lib/api";
+import IncidentDetailSheet from "../incidents/_components/IncidentDetailSheet";
+import type { CreateIncidentInput, IncidentDetail } from "../incidents/_lib/types";
+import { apiCreateIncident, apiGetIncidentDetail } from "../incidents/_lib/api";
 
 /* =========================
    TYPES
@@ -177,10 +178,41 @@ export default function MyProfilePage() {
   const [openCreate, setOpenCreate] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
 
+  // Detail sheet (read-only)
+  const [openSheet, setOpenSheet] = React.useState(false);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [detail, setDetail] = React.useState<IncidentDetail | null>(null);
+  const [detailLoading, setDetailLoading] = React.useState(false);
+
   const fetchProfile = React.useCallback(async () => {
     const profile = await apiGetMyProfile();
     setData(profile);
   }, []);
+
+  const fetchDetail = React.useCallback(async (id: string) => {
+    setDetailLoading(true);
+    try {
+      const d = await apiGetIncidentDetail(id);
+      setDetail(d);
+    } catch {
+      setDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const handleOpenDetail = React.useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setOpenSheet(true);
+      fetchDetail(id);
+    },
+    [fetchDetail]
+  );
+
+  const reloadDetail = React.useCallback(async () => {
+    if (selectedId) await fetchDetail(selectedId);
+  }, [selectedId, fetchDetail]);
 
   React.useEffect(() => {
     let alive = true;
@@ -544,7 +576,8 @@ export default function MyProfilePage() {
                       {incidentsFiltered.map((it) => (
                         <TableRow
                           key={it.id}
-                          className="hover:bg-muted/20 transition-colors"
+                          className="hover:bg-muted/20 transition-colors cursor-pointer"
+                          onClick={() => handleOpenDetail(it.id)}
                         >
                           <TableCell className="font-mono text-sm font-medium">
                             {it.code || "—"}
@@ -702,6 +735,16 @@ export default function MyProfilePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Detalle de incidencia (solo lectura) */}
+      <IncidentDetailSheet
+        open={openSheet}
+        onOpenChange={setOpenSheet}
+        selectedId={selectedId}
+        detailLoading={detailLoading}
+        detail={detail}
+        onReload={reloadDetail}
+      />
     </div>
   );
 }

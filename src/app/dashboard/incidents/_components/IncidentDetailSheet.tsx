@@ -183,8 +183,8 @@ export default function IncidentDetailSheet({
     return snap ?? "—";
   }, [detail]);
 
-  const incidentFolio = (detail as any)?.number
-    ? String((detail as any).number)
+  const incidentFolio = (detail as any)?.number != null
+    ? `#${String((detail as any).number).padStart(3, "0")}`
     : null;
   const incidentIdLabel = selectedId || (detail as any)?.id || "—";
   const incidentDateLabel =
