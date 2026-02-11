@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,12 +17,34 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+} from "recharts";
 
 import type { TaskStats } from "../_lib/types";
 
 type Props = {
   stats: TaskStats;
 };
+
+/* ── Chart configs ── */
+const statusChartConfig = {
+  Pendiente: { label: "Pendiente", color: "var(--color-chart-4)" },
+  "En progreso": { label: "En progreso", color: "var(--color-chart-1)" },
+  Completada: { label: "Completada", color: "var(--color-chart-2)" },
+  Cancelada: { label: "Cancelada", color: "var(--color-chart-5)" },
+} satisfies ChartConfig;
+
+const priorityChartConfig = {
+  Baja: { label: "Baja", color: "var(--color-chart-2)" },
+  Media: { label: "Media", color: "var(--color-chart-4)" },
+  Alta: { label: "Alta", color: "var(--color-chart-1)" },
+} satisfies ChartConfig;
 
 function KpiCard({
   label,
@@ -87,7 +115,22 @@ export default function TaskKpiDashboard({ stats }: Props) {
   const pending = s.byStatus.PENDING ?? 0;
   const inProgress = s.byStatus.IN_PROGRESS ?? 0;
   const completed = s.byStatus.COMPLETED ?? 0;
+  const cancelled = s.byStatus.CANCELLED ?? 0;
   const highPriority = s.byPriority.ALTA ?? 0;
+
+  /* ── Chart data ── */
+  const statusData = [
+    { name: "Pendiente", value: pending, fill: "var(--color-Pendiente)" },
+    { name: "En progreso", value: inProgress, fill: "var(--color-En progreso)" },
+    { name: "Completada", value: completed, fill: "var(--color-Completada)" },
+    { name: "Cancelada", value: cancelled, fill: "var(--color-Cancelada)" },
+  ].filter((d) => d.value > 0);
+
+  const priorityData = [
+    { name: "Baja", value: s.byPriority.BAJA ?? 0, fill: "var(--color-Baja)" },
+    { name: "Media", value: s.byPriority.MEDIA ?? 0, fill: "var(--color-Media)" },
+    { name: "Alta", value: s.byPriority.ALTA ?? 0, fill: "var(--color-Alta)" },
+  ].filter((d) => d.value > 0);
 
   return (
     <div className="space-y-4">
@@ -190,6 +233,88 @@ export default function TaskKpiDashboard({ stats }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Horizontal bar chart - by status */}
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-3 px-4">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Distribucion por estado
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {statusData.length > 0 ? (
+              <ChartContainer config={statusChartConfig} className="h-[200px] w-full">
+                <BarChart
+                  data={statusData}
+                  layout="vertical"
+                  margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
+                >
+                  <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={90} />
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-xs text-muted-foreground italic">
+                Sin datos
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Donut chart - by priority */}
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-3 px-4">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Distribucion por prioridad
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {priorityData.length > 0 ? (
+              <>
+                <ChartContainer config={priorityChartConfig} className="aspect-square max-h-[200px] w-full">
+                  <PieChart>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                    <Pie
+                      data={priorityData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={3}
+                      dataKey="value"
+                      nameKey="name"
+                      strokeWidth={2}
+                      stroke="var(--color-background)"
+                    />
+                  </PieChart>
+                </ChartContainer>
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-4 mt-3">
+                  {priorityData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-1.5">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: priorityChartConfig[d.name as keyof typeof priorityChartConfig]?.color }}
+                      />
+                      <span className="text-[11px] text-muted-foreground">
+                        {d.name} ({d.value})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-xs text-muted-foreground italic">
+                Sin datos
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

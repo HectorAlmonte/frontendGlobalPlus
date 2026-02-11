@@ -12,6 +12,9 @@ import CorrectiveModal from "./_components/CorrectiveModal";
 import CloseIncidentModal from "./_components/CloseIncidentModal";
 import CreateIncidentDialog from "./_components/CreateIncidentDialog";
 import IncidentKpiDashboard from "./_components/IncidentKpiDashboard";
+import EditIncidentDialog from "./_components/EditIncidentDialog";
+import EditCorrectiveDialog from "./_components/EditCorrectiveDialog";
+import EditClosureDialog from "./_components/EditClosureDialog";
 
 import type {
   CreateIncidentInput,
@@ -26,6 +29,7 @@ import {
   apiGetIncidentDetail,
   apiListIncidents,
   apiCloseIncidentForm,
+  apiDeleteIncident,
   API_BASE,
 } from "./_lib/api";
 
@@ -55,9 +59,6 @@ export default function IncidentsPage() {
   const [items, setItems] = useState<IncidentListItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<IncidentStatus | "ALL">("ALL");
-
   const [openSheet, setOpenSheet] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<IncidentDetail | null>(null);
@@ -72,13 +73,24 @@ export default function IncidentsPage() {
   const [closeIncidentId, setCloseIncidentId] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
 
-  // Period filter
-  const [period, setPeriod] = useState<IncidentPeriod>("all");
+  // Edit dialogs
+  const [editIncidentOpen, setEditIncidentOpen] = useState(false);
+  const [editCorrectiveOpen, setEditCorrectiveOpen] = useState(false);
+  const [editClosureOpen, setEditClosureOpen] = useState(false);
+
+  // Analytics period (independent from table)
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<IncidentPeriod>("all");
+
+  // Table filters
+  const [tableFilters, setTableFilters] = useState<{
+    q: string;
+    status: IncidentStatus | "ALL";
+    dateFrom?: Date;
+    dateTo?: Date;
+  }>({ q: "", status: "ALL" });
 
   // Analytics toggle
   const [showAnalytics, setShowAnalytics] = useState(false);
-
-  // API_BASE importado desde api.ts (usa NEXT_PUBLIC_API_URL)
 
   // =========================
   // PERFIL (para saber roleKey)
@@ -129,14 +141,21 @@ export default function IncidentsPage() {
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiListIncidents({ period });
+      const data = await apiListIncidents({
+        dateFrom: tableFilters.dateFrom
+          ? tableFilters.dateFrom.toISOString()
+          : undefined,
+        dateTo: tableFilters.dateTo
+          ? tableFilters.dateTo.toISOString()
+          : undefined,
+      });
       setItems(data);
     } catch (e) {
       console.error("Error al listar:", e);
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [tableFilters.dateFrom, tableFilters.dateTo]);
 
   const fetchDetail = useCallback(async (id: string) => {
     setDetailLoading(true);
@@ -165,15 +184,16 @@ export default function IncidentsPage() {
   }, [selectedId, fetchDetail]);
 
   // =========================
-  // FILTROS
+  // FILTROS (client-side)
   // =========================
   const filtered = useMemo(() => {
     let out = items;
 
-    if (status !== "ALL") out = out.filter((x) => x.status === status);
+    if (tableFilters.status !== "ALL")
+      out = out.filter((x) => x.status === tableFilters.status);
 
-    if (q.trim()) {
-      const needle = q.trim().toLowerCase();
+    if (tableFilters.q.trim()) {
+      const needle = tableFilters.q.trim().toLowerCase();
       out = out.filter(
         (x) =>
           (x.title ?? "").toLowerCase().includes(needle) ||
@@ -185,8 +205,18 @@ export default function IncidentsPage() {
       );
     }
 
+    // Client-side date fallback
+    if (tableFilters.dateFrom) {
+      const from = tableFilters.dateFrom.getTime();
+      out = out.filter((x) => new Date(x.reportedAt).getTime() >= from);
+    }
+    if (tableFilters.dateTo) {
+      const to = tableFilters.dateTo.getTime() + 86400000; // end of day
+      out = out.filter((x) => new Date(x.reportedAt).getTime() < to);
+    }
+
     return out;
-  }, [items, q, status]);
+  }, [items, tableFilters]);
 
   // =========================
   // HANDLERS
@@ -224,6 +254,38 @@ export default function IncidentsPage() {
     },
     [closeIncidentId, selectedId, fetchDetail, fetchList]
   );
+
+  const handleEditIncident = useCallback(() => {
+    if (detail) setEditIncidentOpen(true);
+  }, [detail]);
+
+  const handleEditCorrective = useCallback(() => {
+    if (detail) setEditCorrectiveOpen(true);
+  }, [detail]);
+
+  const handleEditClosure = useCallback(() => {
+    if (detail) setEditClosureOpen(true);
+  }, [detail]);
+
+  const handleDeleteIncident = useCallback(
+    async (id: string) => {
+      try {
+        await apiDeleteIncident(id);
+        setOpenSheet(false);
+        setSelectedId(null);
+        setDetail(null);
+        await fetchList();
+      } catch (e) {
+        console.error("Error al eliminar incidencia:", e);
+      }
+    },
+    [fetchList]
+  );
+
+  const handleEditSaved = useCallback(async () => {
+    await reloadDetail();
+    await fetchList();
+  }, [reloadDetail, fetchList]);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7 space-y-6">
@@ -268,9 +330,9 @@ export default function IncidentsPage() {
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setPeriod(opt.value)}
+                  onClick={() => setAnalyticsPeriod(opt.value)}
                   className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                    period === opt.value
+                    analyticsPeriod === opt.value
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -282,7 +344,7 @@ export default function IncidentsPage() {
           </div>
 
           <IncidentKpiDashboard
-            period={period}
+            period={analyticsPeriod}
             fetchMetrics={fetchMetrics}
           />
         </div>
@@ -294,17 +356,9 @@ export default function IncidentsPage() {
           <div className="space-y-0.5">
             <h2 className="text-sm font-semibold">Listado de incidencias</h2>
             <p className="text-xs text-muted-foreground">
-              {period === "all"
-                ? "Mostrando todas las incidencias."
-                : `Mostrando incidencias de los ultimos ${
-                    period === "7d"
-                      ? "7 dias"
-                      : period === "15d"
-                      ? "15 dias"
-                      : period === "1m"
-                      ? "30 dias"
-                      : "12 meses"
-                  }.`}
+              {tableFilters.dateFrom || tableFilters.dateTo
+                ? "Mostrando incidencias en el rango seleccionado."
+                : "Mostrando todas las incidencias."}
             </p>
           </div>
         </div>
@@ -315,6 +369,8 @@ export default function IncidentsPage() {
           <IncidentsTable
             loading={loading}
             items={filtered}
+            filters={tableFilters}
+            onFiltersChange={setTableFilters}
             onOpen={(id) => {
               setSelectedId(id);
               setOpenSheet(true);
@@ -341,6 +397,10 @@ export default function IncidentsPage() {
           setCloseOpen(true);
         }}
         closing={closing}
+        onEditIncident={handleEditIncident}
+        onEditCorrective={handleEditCorrective}
+        onEditClosure={handleEditClosure}
+        onDeleteIncident={handleDeleteIncident}
       />
 
       <CorrectiveModal
@@ -362,6 +422,47 @@ export default function IncidentsPage() {
         loading={closing}
         onSubmit={handleCloseSubmit}
         profile={profile}
+      />
+
+      <EditIncidentDialog
+        open={editIncidentOpen}
+        onOpenChange={setEditIncidentOpen}
+        detail={detail}
+        onSaved={handleEditSaved}
+      />
+
+      <EditCorrectiveDialog
+        open={editCorrectiveOpen}
+        onOpenChange={setEditCorrectiveOpen}
+        incidentId={detail?.id ?? null}
+        corrective={
+          detail
+            ? {
+                priority: (detail as any).corrective?.priority ?? "MEDIA",
+                dueDate:
+                  (detail as any).correctiveDueAt ??
+                  (detail as any).corrective?.dueDate ??
+                  null,
+                detail:
+                  (detail as any).correctiveAction ??
+                  (detail as any).corrective?.detail ??
+                  "",
+              }
+            : null
+        }
+        onSaved={handleEditSaved}
+      />
+
+      <EditClosureDialog
+        open={editClosureOpen}
+        onOpenChange={setEditClosureOpen}
+        incidentId={detail?.id ?? null}
+        closureDetail={
+          (detail as any)?.closureDetail ??
+          (detail as any)?.closure?.detail ??
+          ""
+        }
+        onSaved={handleEditSaved}
       />
     </div>
   );

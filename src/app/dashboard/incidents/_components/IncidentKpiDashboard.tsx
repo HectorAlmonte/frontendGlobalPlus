@@ -3,9 +3,14 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,6 +21,16 @@ import {
   RefreshCw,
   Users,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 import type { IncidentPeriod } from "../_lib/types";
 
@@ -84,6 +99,23 @@ const periodToRange = (p: IncidentPeriod): string => {
   };
   return map[p] || "ALL";
 };
+
+/* ── Chart configs ── */
+const seriesChartConfig = {
+  total: { label: "Incidencias", color: "var(--color-chart-1)" },
+} satisfies ChartConfig;
+
+function makeBreakdownConfig(rows: BreakdownRow[]): ChartConfig {
+  const cfg: ChartConfig = {};
+  rows.forEach((r, i) => {
+    const key = `item${i}`;
+    cfg[key] = {
+      label: prettyLabel(r.label),
+      color: `var(--color-chart-${(i % 5) + 1})`,
+    };
+  });
+  return cfg;
+}
 
 /* ── KpiCard ── */
 function KpiCard({
@@ -168,25 +200,97 @@ function MiniProgressBar({ value, color }: { value: number; color: string }) {
   );
 }
 
+/* ── DonutChart ── */
+function DonutChart({ rows }: { rows?: BreakdownRow[] }) {
+  const safe = Array.isArray(rows) ? rows.filter((r) => r.count > 0) : [];
+  if (safe.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[200px] text-xs text-muted-foreground italic">
+        Sin datos
+      </div>
+    );
+  }
+
+  const data = safe.map((r, i) => ({
+    name: prettyLabel(r.label),
+    value: r.count,
+    fill: `var(--color-item${i})`,
+  }));
+  const config = makeBreakdownConfig(safe);
+
+  return (
+    <ChartContainer config={config} className="aspect-square max-h-[200px] w-full">
+      <PieChart>
+        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={50}
+          outerRadius={80}
+          paddingAngle={3}
+          dataKey="value"
+          nameKey="name"
+          strokeWidth={2}
+          stroke="var(--color-background)"
+        />
+      </PieChart>
+    </ChartContainer>
+  );
+}
+
 /* ── BreakdownBarList ── */
-function BreakdownBarList({
+function BreakdownBarList({ rows }: { rows?: BreakdownRow[] }) {
+  const safe = Array.isArray(rows) ? rows : [];
+  const max = safe.reduce((m, r) => Math.max(m, r.count), 0) || 1;
+
+  return (
+    <div className="space-y-3">
+      {safe.length === 0 ? (
+        <div className="py-6 text-center text-xs text-muted-foreground italic">
+          No hay datos disponibles
+        </div>
+      ) : (
+        safe.map((r, idx) => (
+          <div key={`${r.label}-${idx}`} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: `var(--color-chart-${(idx % 5) + 1})` }}
+                />
+                <span className="text-xs font-semibold text-foreground truncate">
+                  {prettyLabel(r.label)}
+                </span>
+              </div>
+              <span className="text-xs font-bold tabular-nums text-foreground">
+                {r.count}
+              </span>
+            </div>
+            <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="absolute h-full rounded-full transition-all"
+                style={{
+                  width: `${(r.count / max) * 100}%`,
+                  backgroundColor: `var(--color-chart-${(idx % 5) + 1})`,
+                }}
+              />
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/* ── BreakdownWithDonut (combined) ── */
+function BreakdownWithDonut({
   title,
   rows,
 }: {
   title: string;
   rows?: BreakdownRow[];
 }) {
-  const safe = Array.isArray(rows) ? rows : [];
-  const max = safe.reduce((m, r) => Math.max(m, r.count), 0) || 1;
-
-  const getColor = (label: string) => {
-    const l = String(label || "").toUpperCase();
-    if (l === "ALTA" || l === "URGENTE") return "bg-rose-500";
-    if (l === "MEDIA") return "bg-amber-500";
-    if (l === "BAJA") return "bg-emerald-500";
-    return "bg-primary/80";
-  };
-
   return (
     <Card className="border-none shadow-sm">
       <CardHeader className="pb-3 px-4">
@@ -194,31 +298,11 @@ function BreakdownBarList({
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 px-4 pb-4">
-        {safe.length === 0 ? (
-          <div className="py-6 text-center text-xs text-muted-foreground italic">
-            No hay datos disponibles
-          </div>
-        ) : (
-          safe.map((r, idx) => (
-            <div key={`${r.label}-${idx}`} className="space-y-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold text-foreground truncate">
-                  {prettyLabel(r.label)}
-                </span>
-                <span className="text-xs font-bold tabular-nums text-foreground">
-                  {r.count}
-                </span>
-              </div>
-              <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className={`absolute h-full rounded-full transition-all ${getColor(r.label)}`}
-                  style={{ width: `${(r.count / max) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))
-        )}
+      <CardContent className="px-4 pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+          <DonutChart rows={rows} />
+          <BreakdownBarList rows={rows} />
+        </div>
       </CardContent>
     </Card>
   );
@@ -276,7 +360,6 @@ export default function IncidentKpiDashboard({ period, fetchMetrics }: Props) {
   const avgCloseDays = data?.avgCloseDays ?? 0;
 
   const series = Array.isArray(data?.series) ? data!.series : [];
-  const maxTotal = series.length > 0 ? Math.max(...series.map((s) => s.total)) : 0;
   const activeDays = series.filter((s) => s.total > 0).length;
 
   /* ── Loading skeleton ── */
@@ -441,7 +524,7 @@ export default function IncidentKpiDashboard({ period, fetchMetrics }: Props) {
         </CardContent>
       </Card>
 
-      {/* ── Actividad temporal ── */}
+      {/* ── Actividad temporal (recharts BarChart via ChartContainer) ── */}
       <Card className="border-none shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
@@ -467,45 +550,37 @@ export default function IncidentKpiDashboard({ period, fetchMetrics }: Props) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex h-32 items-end gap-1 pb-2">
-            {series.length > 0 ? (
-              series.map((p, idx) => {
-                const heightPct =
-                  maxTotal > 0 ? (p.total / maxTotal) * 100 : 0;
-                const minPct = p.total > 0 ? 6 : 0;
-                const finalPct = Math.max(heightPct, minPct);
-
-                return (
-                  <div
-                    key={idx}
-                    className="group relative flex-1 flex flex-col items-center justify-end h-full"
-                  >
-                    <div className="absolute -top-7 hidden group-hover:block bg-foreground text-background text-[10px] px-2 py-0.5 rounded z-20 whitespace-nowrap">
-                      {p.total} inc. ({p.date})
-                    </div>
-                    <div
-                      className={`w-full rounded-t-md transition-all ${
-                        p.total === maxTotal && maxTotal > 0
-                          ? "bg-primary"
-                          : "bg-primary/20 hover:bg-primary/35"
-                      }`}
-                      style={{ height: `${finalPct}%` }}
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <div className="w-full flex items-center justify-center text-xs text-muted-foreground h-full italic border border-dashed border-border rounded-lg">
-                Sin datos en este rango
-              </div>
-            )}
-          </div>
+          {series.length > 0 ? (
+            <ChartContainer config={seriesChartConfig} className="h-[180px] w-full">
+              <BarChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar
+                  dataKey="total"
+                  fill="var(--color-total)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <div className="w-full flex items-center justify-center text-xs text-muted-foreground h-32 italic border border-dashed border-border rounded-lg">
+              Sin datos en este rango
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* ── Top reporteros + Tasa de resolucion card ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Top reporteros */}
         <Card className="border-none shadow-sm lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -541,7 +616,6 @@ export default function IncidentKpiDashboard({ period, fetchMetrics }: Props) {
           </CardContent>
         </Card>
 
-        {/* Tasa de resolucion highlight */}
         <Card className="border-none shadow-sm bg-slate-950 text-white dark:bg-slate-900">
           <CardContent className="p-5 flex flex-col justify-center h-full relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
@@ -554,9 +628,7 @@ export default function IncidentKpiDashboard({ period, fetchMetrics }: Props) {
             <div className="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
               <div
                 className="bg-emerald-500 h-full rounded-full transition-all"
-                style={{
-                  width: `${resolutionRate}%`,
-                }}
+                style={{ width: `${resolutionRate}%` }}
               />
             </div>
             <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
@@ -594,13 +666,13 @@ export default function IncidentKpiDashboard({ period, fetchMetrics }: Props) {
 
         <div className="mt-3">
           <TabsContent value="type" className="m-0">
-            <BreakdownBarList title="Categorizacion" rows={data?.byType} />
+            <BreakdownWithDonut title="Categorizacion" rows={data?.byType} />
           </TabsContent>
           <TabsContent value="priority" className="m-0">
-            <BreakdownBarList title="Nivel de riesgo" rows={data?.byPriority} />
+            <BreakdownWithDonut title="Nivel de riesgo" rows={data?.byPriority} />
           </TabsContent>
           <TabsContent value="area" className="m-0">
-            <BreakdownBarList title="Ubicacion" rows={data?.byArea} />
+            <BreakdownWithDonut title="Ubicacion" rows={data?.byArea} />
           </TabsContent>
         </div>
       </Tabs>

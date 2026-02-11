@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { FilterPopover } from "@/components/filter-popover";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+
 import type { IncidentListItem, IncidentStatus } from "../_lib/types";
 import { statusBadge } from "../_lib/utils";
 
@@ -41,9 +44,18 @@ const formatDate = (d: string | null | undefined) => {
 };
 
 /* -- Component -- */
+type Filters = {
+  q: string;
+  status: IncidentStatus | "ALL";
+  dateFrom?: Date;
+  dateTo?: Date;
+};
+
 type Props = {
   items: IncidentListItem[];
   loading?: boolean;
+  filters: Filters;
+  onFiltersChange: (f: Filters) => void;
   onOpen: (id: string) => void;
   onRefresh?: () => void;
 };
@@ -51,75 +63,93 @@ type Props = {
 export default function IncidentsTable({
   items,
   loading,
+  filters,
+  onFiltersChange,
   onOpen,
   onRefresh,
 }: Props) {
-  const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<IncidentStatus | "ALL">("ALL");
-
   /* -- Pagination -- */
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
-  const filtered = useMemo(() => {
-    let out = items;
-
-    if (statusFilter !== "ALL") out = out.filter((x) => x.status === statusFilter);
-
-    if (q.trim()) {
-      const needle = q.trim().toLowerCase();
-      out = out.filter(
-        (x) =>
-          (x.title ?? "").toLowerCase().includes(needle) ||
-          x.type.toLowerCase().includes(needle) ||
-          x.detail.toLowerCase().includes(needle) ||
-          (x.area?.name ?? "").toLowerCase().includes(needle) ||
-          (x.reportedBy?.username ?? "").toLowerCase().includes(needle) ||
-          String(x.number ?? "").toLowerCase().includes(needle)
-      );
-    }
-
-    return out;
-  }, [items, q, statusFilter]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const paginatedRows = useMemo(
-    () => filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
-    [filtered, pageIndex, pageSize]
+    () => items.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
+    [items, pageIndex, pageSize]
   );
 
   // Reset page when data or filters change
-  const resetPage = () => setPageIndex(0);
-  useMemo(() => { resetPage(); }, [filtered.length, pageSize]);
+  useMemo(() => { setPageIndex(0); }, [items.length, pageSize]);
+
+  /* -- Filter helpers -- */
+  const activeFilterCount =
+    (filters.status !== "ALL" ? 1 : 0) +
+    (filters.dateFrom || filters.dateTo ? 1 : 0);
+
+  const clearFilters = () => {
+    onFiltersChange({ q: filters.q, status: "ALL" });
+  };
 
   return (
     <div className="space-y-3">
       {/* -- Filtros -- */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-1">
           <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={filters.q}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, q: e.target.value })
+            }
             placeholder="Buscar por titulo, area, tipo..."
             className="w-full sm:w-[260px]"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as IncidentStatus | "ALL")}
+          <FilterPopover
+            activeCount={activeFilterCount}
+            onClear={clearFilters}
           >
-            <SelectTrigger className="w-full sm:w-[140px] h-8">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todas</SelectItem>
-              <SelectItem value="OPEN">Pendiente</SelectItem>
-              <SelectItem value="IN_PROGRESS">En proceso</SelectItem>
-              <SelectItem value="CLOSED">Cerrada</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Estado</Label>
+              <Select
+                value={filters.status}
+                onValueChange={(v) =>
+                  onFiltersChange({
+                    ...filters,
+                    status: v as IncidentStatus | "ALL",
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todas</SelectItem>
+                  <SelectItem value="OPEN">Pendiente</SelectItem>
+                  <SelectItem value="IN_PROGRESS">En proceso</SelectItem>
+                  <SelectItem value="CLOSED">Cerrada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Rango de fechas</Label>
+              <DateRangePicker
+                value={{
+                  from: filters.dateFrom,
+                  to: filters.dateTo,
+                }}
+                onChange={(range) =>
+                  onFiltersChange({
+                    ...filters,
+                    dateFrom: range.from,
+                    dateTo: range.to,
+                  })
+                }
+              />
+            </div>
+          </FilterPopover>
 
           <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
             ↻
@@ -129,7 +159,7 @@ export default function IncidentsTable({
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>
-          {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+          {items.length} resultado{items.length !== 1 ? "s" : ""}
         </span>
       </div>
 

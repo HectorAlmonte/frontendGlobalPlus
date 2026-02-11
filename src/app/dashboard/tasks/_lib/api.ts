@@ -46,6 +46,8 @@ export function apiListTasks(params?: {
   includeDeleted?: boolean;
   period?: TaskPeriod;
   workAreaId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }) {
   const sp = new URLSearchParams();
   if (params?.q) sp.set("q", params.q);
@@ -56,6 +58,8 @@ export function apiListTasks(params?: {
   if (params?.period && params.period !== "all")
     sp.set("period", params.period);
   if (params?.workAreaId) sp.set("workAreaId", params.workAreaId);
+  if (params?.dateFrom) sp.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) sp.set("dateTo", params.dateTo);
 
   return apiFetch<TaskRow[]>(full(`/api/tasks?${sp.toString()}`));
 }

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -23,8 +24,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import SearchSelect from "@/app/dashboard/incidents/_components/SearchSelect";
+import { FilterPopover } from "@/components/filter-popover";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
-import type { TaskRow, TaskStatus, TaskPriority, TaskPeriod } from "../_lib/types";
+import type { TaskRow, TaskStatus, TaskPriority } from "../_lib/types";
 import { apiListTasks, apiDeleteTask, apiRestoreTask, apiSearchWorkAreas } from "../_lib/api";
 
 /* ── Helpers de presentación ── */
@@ -63,10 +66,14 @@ function formatDate(d: string | null) {
   });
 }
 
+const formatFolio = (num?: number | null) => {
+  if (num == null) return "\u2014";
+  return `#${String(num).padStart(3, "0")}`;
+};
+
 /* ── Component ── */
 type Props = {
   refreshKey: number;
-  period: TaskPeriod;
   onCreateClick: () => void;
   onViewClick: (t: TaskRow) => void;
   onEditClick: (t: TaskRow) => void;
@@ -74,7 +81,6 @@ type Props = {
 
 export default function TasksTable({
   refreshKey,
-  period,
   onCreateClick,
   onViewClick,
   onEditClick,
@@ -87,6 +93,8 @@ export default function TasksTable({
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "ALL">("ALL");
   const [workAreaFilter, setWorkAreaFilter] = useState("");
   const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selected, setSelected] = useState<TaskRow | null>(null);
@@ -96,13 +104,27 @@ export default function TasksTable({
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  // Client-side filtering for dates as fallback
+  const filteredRows = useMemo(() => {
+    let out = rows;
+    if (dateFrom) {
+      const from = dateFrom.getTime();
+      out = out.filter((t) => new Date(t.createdAt).getTime() >= from);
+    }
+    if (dateTo) {
+      const to = dateTo.getTime() + 86400000;
+      out = out.filter((t) => new Date(t.createdAt).getTime() < to);
+    }
+    return out;
+  }, [rows, dateFrom, dateTo]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const paginatedRows = useMemo(
-    () => rows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
-    [rows, pageIndex, pageSize]
+    () => filteredRows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
+    [filteredRows, pageIndex, pageSize]
   );
 
-  useEffect(() => setPageIndex(0), [rows, pageSize]);
+  useEffect(() => setPageIndex(0), [filteredRows, pageSize]);
 
   const fetchWorkAreas = useCallback((q: string) => apiSearchWorkAreas(q), []);
 
@@ -114,8 +136,9 @@ export default function TasksTable({
         status: statusFilter !== "ALL" ? statusFilter : undefined,
         priority: priorityFilter !== "ALL" ? priorityFilter : undefined,
         includeDeleted: includeDeleted || undefined,
-        period,
         workAreaId: workAreaFilter || undefined,
+        dateFrom: dateFrom ? dateFrom.toISOString() : undefined,
+        dateTo: dateTo ? dateTo.toISOString() : undefined,
       });
       setRows(data);
     } catch (e: any) {
@@ -129,7 +152,7 @@ export default function TasksTable({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, period]);
+  }, [refreshKey]);
 
   const askDelete = (t: TaskRow) => {
     setSelected(t);
@@ -161,11 +184,28 @@ export default function TasksTable({
     }
   };
 
+  /* ── Filter helpers ── */
+  const activeFilterCount =
+    (statusFilter !== "ALL" ? 1 : 0) +
+    (priorityFilter !== "ALL" ? 1 : 0) +
+    (workAreaFilter ? 1 : 0) +
+    (includeDeleted ? 1 : 0) +
+    (dateFrom || dateTo ? 1 : 0);
+
+  const clearFilters = () => {
+    setStatusFilter("ALL");
+    setPriorityFilter("ALL");
+    setWorkAreaFilter("");
+    setIncludeDeleted(false);
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
   return (
     <div className="space-y-3">
       {/* ── Filtros ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-1">
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -179,56 +219,79 @@ export default function TasksTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as TaskStatus | "ALL")}
+          <FilterPopover
+            activeCount={activeFilterCount}
+            onClear={clearFilters}
           >
-            <SelectTrigger className="w-full sm:w-[140px] h-8">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos</SelectItem>
-              <SelectItem value="PENDING">Pendiente</SelectItem>
-              <SelectItem value="IN_PROGRESS">En progreso</SelectItem>
-              <SelectItem value="COMPLETED">Completada</SelectItem>
-              <SelectItem value="CANCELLED">Cancelada</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Estado</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v as TaskStatus | "ALL")}
+              >
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos</SelectItem>
+                  <SelectItem value="PENDING">Pendiente</SelectItem>
+                  <SelectItem value="IN_PROGRESS">En progreso</SelectItem>
+                  <SelectItem value="COMPLETED">Completada</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Select
-            value={priorityFilter}
-            onValueChange={(v) => setPriorityFilter(v as TaskPriority | "ALL")}
-          >
-            <SelectTrigger className="w-full sm:w-[120px] h-8">
-              <SelectValue placeholder="Prioridad" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todas</SelectItem>
-              <SelectItem value="BAJA">Baja</SelectItem>
-              <SelectItem value="MEDIA">Media</SelectItem>
-              <SelectItem value="ALTA">Alta</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Prioridad</Label>
+              <Select
+                value={priorityFilter}
+                onValueChange={(v) => setPriorityFilter(v as TaskPriority | "ALL")}
+              >
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue placeholder="Prioridad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todas</SelectItem>
+                  <SelectItem value="BAJA">Baja</SelectItem>
+                  <SelectItem value="MEDIA">Media</SelectItem>
+                  <SelectItem value="ALTA">Alta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="w-full sm:w-[180px]">
-            <SearchSelect
-              value={workAreaFilter}
-              onChange={(id) => setWorkAreaFilter(id)}
-              placeholder="Área de trabajo"
-              searchPlaceholder="Buscar área..."
-              emptyText="Sin áreas"
-              fetcher={fetchWorkAreas}
-              allowClear
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Area de trabajo</Label>
+              <SearchSelect
+                value={workAreaFilter}
+                onChange={(id) => setWorkAreaFilter(id)}
+                placeholder="Seleccionar area"
+                searchPlaceholder="Buscar area..."
+                emptyText="Sin areas"
+                fetcher={fetchWorkAreas}
+                allowClear
+              />
+            </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIncludeDeleted((v) => !v)}
-          >
-            {includeDeleted ? "Con eliminadas" : "Sin eliminadas"}
-          </Button>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Incluir eliminadas</Label>
+              <Switch
+                checked={includeDeleted}
+                onCheckedChange={setIncludeDeleted}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Rango de fechas</Label>
+              <DateRangePicker
+                value={{ from: dateFrom, to: dateTo }}
+                onChange={(range) => {
+                  setDateFrom(range.from);
+                  setDateTo(range.to);
+                }}
+              />
+            </div>
+          </FilterPopover>
 
           <Button size="sm" variant="outline" onClick={load} disabled={loading}>
             ↻
@@ -242,7 +305,7 @@ export default function TasksTable({
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>
-          {rows.length} resultado{rows.length !== 1 ? "s" : ""}
+          {filteredRows.length} resultado{filteredRows.length !== 1 ? "s" : ""}
         </span>
         <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={load}>
           Aplicar filtros
@@ -256,6 +319,7 @@ export default function TasksTable({
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr className="text-left">
+              <th className="px-3 py-2">Folio</th>
               <th className="px-3 py-2">Título</th>
               <th className="px-3 py-2">Área</th>
               <th className="px-3 py-2">Estado</th>
@@ -272,7 +336,7 @@ export default function TasksTable({
               <tr>
                 <td
                   className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={8}
+                  colSpan={9}
                 >
                   {loading ? "Cargando..." : "Sin tareas"}
                 </td>
@@ -286,6 +350,10 @@ export default function TasksTable({
                   t.isDeleted ? "opacity-50 line-through" : ""
                 }`}
               >
+                <td className="px-3 py-2 font-mono font-medium text-primary">
+                  {formatFolio(t.number)}
+                </td>
+
                 <td className="px-3 py-2">
                   <button
                     className="font-medium text-left hover:underline"
@@ -385,7 +453,7 @@ export default function TasksTable({
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
           <Label htmlFor="tasks-page-size" className="text-sm font-medium">
-            Filas por página
+            Filas por pagina
           </Label>
           <Select
             value={String(pageSize)}
@@ -406,7 +474,7 @@ export default function TasksTable({
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            Página {pageIndex + 1} de {pageCount}
+            Pagina {pageIndex + 1} de {pageCount}
           </span>
           <Button
             variant="outline"

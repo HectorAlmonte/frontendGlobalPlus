@@ -16,11 +16,15 @@ export async function apiListIncidents(params?: {
   q?: string;
   status?: IncidentStatus;
   period?: IncidentPeriod;
+  dateFrom?: string;
+  dateTo?: string;
 }): Promise<IncidentListItem[]> {
   const url = new URL(`${API_BASE}/api/incidents`);
   if (params?.q) url.searchParams.set("q", params.q);
   if (params?.status) url.searchParams.set("status", params.status);
   if (params?.period && params.period !== "all") url.searchParams.set("period", params.period);
+  if (params?.dateFrom) url.searchParams.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) url.searchParams.set("dateTo", params.dateTo);
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Error listando incidencias");
   const data = await res.json();
@@ -155,6 +159,98 @@ export async function apiSearchObservedUsers(q: string): Promise<Option[]> {
     label: String(x.label),
   }));
 }
+
+/**
+ * =========================
+ * EDICIÓN / ELIMINACIÓN
+ * =========================
+ */
+
+export async function apiPatchIncident(
+  id: string,
+  body: Record<string, unknown>
+) {
+  const res = await fetch(`${API_BASE}/api/incidents/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = "Error al editar la incidencia";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function apiPatchCorrective(
+  incidentId: string,
+  body: Record<string, unknown>
+) {
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/corrective`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = "Error al editar el correctivo";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function apiPatchClosure(
+  incidentId: string,
+  body: { detail: string }
+) {
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/closure`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = "Error al editar el cierre";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function apiDeleteIncident(id: string) {
+  const res = await fetch(`${API_BASE}/api/incidents/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    let msg = "Error al eliminar la incidencia";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function apiDeleteIncidentFile(fileId: string) {
+  const res = await fetch(`${API_BASE}/api/incidents/files/${fileId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    let msg = "Error al eliminar el archivo";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/**
+ * =========================
+ * SEARCH SELECTS (Observed)
+ * =========================
+ */
 
 export async function apiSearchAreas(q: string): Promise<Option[]> {
   const url = new URL(`${API_BASE}/api/areas/search`);

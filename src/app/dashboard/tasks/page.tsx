@@ -32,8 +32,8 @@ export default function TasksPage() {
   const [viewTaskId, setViewTaskId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  // Period filter
-  const [period, setPeriod] = useState<TaskPeriod>("all");
+  // Analytics period (independent from table)
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<TaskPeriod>("all");
 
   // Analytics toggle
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -55,8 +55,8 @@ export default function TasksPage() {
   }, []);
 
   useEffect(() => {
-    loadStats(period);
-  }, [loadStats, period, refreshKey]);
+    loadStats(analyticsPeriod);
+  }, [loadStats, analyticsPeriod, refreshKey]);
 
   const openCreate = () => {
     setEditing(null);
@@ -136,9 +136,9 @@ export default function TasksPage() {
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setPeriod(opt.value)}
+                  onClick={() => setAnalyticsPeriod(opt.value)}
                   className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                    period === opt.value
+                    analyticsPeriod === opt.value
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -172,11 +172,7 @@ export default function TasksPage() {
           <div className="space-y-0.5">
             <h2 className="text-sm font-semibold">Listado de tareas</h2>
             <p className="text-xs text-muted-foreground">
-              {period === "all"
-                ? "Mostrando todas las tareas."
-                : `Mostrando tareas de los ultimos ${
-                    period === "7d" ? "7 dias" : period === "15d" ? "15 dias" : period === "1m" ? "30 dias" : "12 meses"
-                  }.`}
+              Mostrando todas las tareas.
             </p>
           </div>
         </div>
@@ -186,7 +182,6 @@ export default function TasksPage() {
         <div className="p-4">
           <TasksTable
             refreshKey={refreshKey}
-            period={period}
             onCreateClick={openCreate}
             onViewClick={openView}
             onEditClick={openEdit}

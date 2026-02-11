@@ -674,9 +674,63 @@ function getPrintCss() {
 }
 
 /* =========================
+   Helpers: preload image as data-URL
+========================= */
+async function preloadImageAsDataUrl(src: string): Promise<string | null> {
+  try {
+    const res = await fetch(src, { cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function waitForImages(container: HTMLElement, timeoutMs = 4000): Promise<void> {
+  const imgs = Array.from(container.querySelectorAll("img"));
+  if (imgs.length === 0) return Promise.resolve();
+
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const timer = setTimeout(done, timeoutMs);
+
+    let pending = imgs.filter((img) => !img.complete).length;
+    if (pending === 0) {
+      clearTimeout(timer);
+      done();
+      return;
+    }
+
+    for (const img of imgs) {
+      if (img.complete) continue;
+      const onDone = () => {
+        pending--;
+        if (pending <= 0) {
+          clearTimeout(timer);
+          done();
+        }
+      };
+      img.addEventListener("load", onDone, { once: true });
+      img.addEventListener("error", onDone, { once: true });
+    }
+  });
+}
+
+/* =========================
    Public API: Print to PDF
 ========================= */
-export function printIncidentToPdf(args: {
+export async function printIncidentToPdf(args: {
   detail: IncidentDetail;
   selectedId?: string | null;
   header?: {
@@ -691,6 +745,14 @@ export function printIncidentToPdf(args: {
   if (!detail) return;
 
   const payload = buildPrintPayload(detail, selectedId);
+
+  // Pre-load logo as base64 so it always shows in print
+  const logoSrc = header?.logoSrc ?? "/logo/logo-texto-negro.png";
+  const logoDataUrl = await preloadImageAsDataUrl(logoSrc);
+
+  const resolvedHeader = header
+    ? { ...header, logoSrc: logoDataUrl ?? logoSrc }
+    : undefined;
 
   const portal = document.createElement("div");
   portal.id = "__incident_print_portal";
@@ -713,18 +775,27 @@ export function printIncidentToPdf(args: {
       filesAll={payload.filesAll}
       corrective={payload.corrective}
       closure={payload.closure}
-      header={header}
+      header={resolvedHeader}
     />
   );
 
-  window.setTimeout(() => {
-    window.print();
-    window.setTimeout(() => {
-      try {
-        root.unmount();
-      } catch {}
-      document.querySelector('style[data-incident-print="true"]')?.remove();
-      document.getElementById("__incident_print_portal")?.remove();
-    }, 250);
-  }, 60);
+  // Wait for React to flush + all images to load
+  await new Promise((r) => setTimeout(r, 100));
+  await waitForImages(portal);
+
+  // Cleanup after print (works on mobile & desktop)
+  const cleanup = () => {
+    try { root.unmount(); } catch {}
+    document.querySelector('style[data-incident-print="true"]')?.remove();
+    document.getElementById("__incident_print_portal")?.remove();
+    window.removeEventListener("afterprint", cleanup);
+  };
+
+  window.addEventListener("afterprint", cleanup, { once: true });
+  // Fallback cleanup for browsers that don't fire afterprint (some mobile)
+  const fallbackTimer = setTimeout(cleanup, 15000);
+  const origCleanup = cleanup;
+  window.addEventListener("afterprint", () => clearTimeout(fallbackTimer), { once: true });
+
+  window.print();
 }

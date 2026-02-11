@@ -29,6 +29,7 @@ export type TaskAssignee = {
 
 export type TaskRow = {
   id: string;
+  number?: number | null;
   title: string;
   description: string | null;
   status: TaskStatus;

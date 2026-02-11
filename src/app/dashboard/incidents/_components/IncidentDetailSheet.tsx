@@ -17,11 +17,26 @@ import { Separator } from "@/components/ui/separator";
 
 import { IncidentDetail } from "../_lib/types";
 import { normalizeCauses, statusBadge } from "../_lib/utils";
+import { apiDeleteIncidentFile } from "../_lib/api";
 
 import { useWord } from "@/context/AppContext";
 import { printIncidentToPdf } from "./incident-print";
 import { apiGetModuleDocument } from "@/app/dashboard/documents/_lib/api";
 import { formatDate } from "@/app/dashboard/documents/_lib/utils";
+import { Pencil, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Props = {
   open: boolean;
@@ -37,6 +52,11 @@ type Props = {
   onOpenCorrective?: (incidentId: string) => void;
   onCloseIncident?: (incidentId: string) => Promise<void> | void;
   closing?: boolean;
+
+  onEditIncident?: (detail: IncidentDetail) => void;
+  onDeleteIncident?: (id: string) => void;
+  onEditCorrective?: (id: string) => void;
+  onEditClosure?: (id: string) => void;
 };
 
 function pickFullName(u: any) {
@@ -100,6 +120,10 @@ export default function IncidentDetailSheet({
   onOpenCorrective,
   onCloseIncident,
   closing,
+  onEditIncident,
+  onDeleteIncident,
+  onEditCorrective,
+  onEditClosure,
 }: Props) {
   const { user, loadingUser } = useWord();
 
@@ -159,6 +183,9 @@ export default function IncidentDetailSheet({
     return snap ?? "—";
   }, [detail]);
 
+  const incidentFolio = (detail as any)?.number
+    ? String((detail as any).number)
+    : null;
   const incidentIdLabel = selectedId || (detail as any)?.id || "—";
   const incidentDateLabel =
     fmtDate((detail as any)?.reportedAt || (detail as any)?.createdAt) || "—";
@@ -273,10 +300,10 @@ export default function IncidentDetailSheet({
             }
           : undefined;
 
-      printIncidentToPdf({ detail, selectedId: incidentIdLabel, header });
+      await printIncidentToPdf({ detail, selectedId: incidentIdLabel, header });
     } catch (e) {
       console.error("Error al obtener cabecera dinámica:", e);
-      printIncidentToPdf({ detail, selectedId: incidentIdLabel });
+      await printIncidentToPdf({ detail, selectedId: incidentIdLabel });
     } finally {
       setPrinting(false);
     }
@@ -291,7 +318,9 @@ export default function IncidentDetailSheet({
             <SheetHeader>
               <SheetTitle>Detalle de incidencia</SheetTitle>
               <SheetDescription className="flex flex-wrap items-center gap-2">
-                <span className="text-xs">ID: {incidentIdLabel}</span>
+                <span className="text-xs">
+                  Folio: {incidentFolio ?? incidentIdLabel}
+                </span>
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="text-xs text-muted-foreground">
                   {incidentDateLabel}
@@ -325,6 +354,37 @@ export default function IncidentDetailSheet({
               >
                 {printing ? "Preparando..." : "Imprimir / PDF"}
               </Button>
+
+              {isSupervisor && detail && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className={btnInteractive}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Eliminar
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Eliminar esta incidencia?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Se marcará como eliminada y ya no aparecerá en el listado. Esta acción no se puede deshacer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => onDeleteIncident?.((detail as any).id)}
+                      >
+                        Eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
 
               <div className="flex-1" />
 
@@ -407,11 +467,24 @@ export default function IncidentDetailSheet({
                         {statusBadge((detail as any).status)}
                       </div>
 
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Tipo</p>
-                        <p className="font-semibold tracking-wide">
-                          {(detail as any).type}
-                        </p>
+                      <div className="flex items-start gap-2">
+                        {isSupervisor && !isClosed && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Editar incidencia"
+                            onClick={() => onEditIncident?.(detail)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Tipo</p>
+                          <p className="font-semibold tracking-wide">
+                            {(detail as any).type}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -425,9 +498,9 @@ export default function IncidentDetailSheet({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          ID de incidencia
+                          Folio
                         </p>
-                        <p className="font-medium">{incidentIdLabel}</p>
+                        <p className="font-medium">{incidentFolio ?? incidentIdLabel}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">
@@ -538,16 +611,59 @@ export default function IncidentDetailSheet({
                                 </p>
                               </div>
 
-                              {f.__url ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="h-8"
-                                  onClick={() => window.open(f.__url, "_blank")}
-                                >
-                                  Abrir
-                                </Button>
-                              ) : null}
+                              <div className="flex items-center gap-1">
+                                {f.__url ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-8"
+                                    onClick={() => window.open(f.__url, "_blank")}
+                                  >
+                                    Abrir
+                                  </Button>
+                                ) : null}
+
+                                {isSupervisor && f.id && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                        title="Eliminar archivo"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Eliminar este archivo?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta acción no se puede deshacer.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          onClick={async () => {
+                                            try {
+                                              await apiDeleteIncidentFile(f.id);
+                                              toast.success("Archivo eliminado");
+                                              onReload();
+                                            } catch (e: any) {
+                                              toast.error(e?.message || "Error al eliminar archivo");
+                                            }
+                                          }}
+                                        >
+                                          Eliminar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -559,7 +675,20 @@ export default function IncidentDetailSheet({
                 {corrective.hasCorrective && (
                   <Card className="border-muted/60 mt-5">
                     <CardHeader className="space-y-1">
-                      <CardTitle className="text-base">Correctivo</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Correctivo</CardTitle>
+                        {isSupervisor && !isClosed && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Editar correctivo"
+                            onClick={() => onEditCorrective?.((detail as any).id)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                       {corrective.priority ? (
                         <p className="text-xs text-muted-foreground">
                           Prioridad:{" "}
@@ -615,9 +744,22 @@ export default function IncidentDetailSheet({
                 {closure.hasClosure && (
                   <Card className="border-muted/60 mt-5">
                     <CardHeader className="space-y-1">
-                      <CardTitle className="text-base">
-                        Cierre de incidencia
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">
+                          Cierre de incidencia
+                        </CardTitle>
+                        {isSupervisor && isClosed && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Editar cierre"
+                            onClick={() => onEditClosure?.((detail as any).id)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         Estado final: <span className="font-medium">CLOSED</span>
                       </p>
