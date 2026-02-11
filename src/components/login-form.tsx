@@ -279,7 +279,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   htmlFor="password"
                   className="text-sm font-medium"
                 >
-                  Contraseñnoa
+                  Contraseña
                 </Label>
                 <div className="relative">
                   <Input
@@ -327,7 +327,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
             {/* Footer */}
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              Si olvidaste tu contrasena, contacta al administrador del sistema.
+              Si olvidaste tu contraseña, contacta al administrador del sistema.
             </p>
           </div>
         </div>
