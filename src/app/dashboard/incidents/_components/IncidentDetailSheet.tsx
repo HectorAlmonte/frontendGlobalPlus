@@ -20,11 +20,13 @@ import { normalizeCauses, statusBadge } from "../_lib/utils";
 import { apiDeleteIncidentFile } from "../_lib/api";
 
 import { useWord } from "@/context/AppContext";
+import { hasRole } from "@/lib/utils";
 import { printIncidentToPdf } from "./incident-print";
 import { apiGetModuleDocument } from "@/app/dashboard/documents/_lib/api";
 import { formatDate } from "@/app/dashboard/documents/_lib/utils";
 import { Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import SubtaskSection from "./SubtaskSection";
 
 import {
   AlertDialog,
@@ -127,9 +129,8 @@ export default function IncidentDetailSheet({
 }: Props) {
   const { user, loadingUser } = useWord();
 
-  const roleKey = (user as any)?.role?.key ?? "";
   const isSupervisor =
-    !loadingUser && (roleKey === "SUPERVISOR" || roleKey === "ADMIN");
+    !loadingUser && (hasRole(user, "ADMIN") || hasRole(user, "SUPERVISOR") || hasRole(user, "SEGURIDAD"));
 
   const isClosed = (detail as any)?.status === "CLOSED";
 
@@ -178,6 +179,10 @@ export default function IncidentDetailSheet({
 
     if ((detail as any).observedKind === "AREA") {
       return (detail as any).observedArea?.name ?? snap ?? "—";
+    }
+
+    if ((detail as any).observedKind === "OTRO") {
+      return (detail as any).observedOtherDetail ?? snap ?? "Otro";
     }
 
     return snap ?? "—";
@@ -508,6 +513,15 @@ export default function IncidentDetailSheet({
                         </p>
                         <p className="font-medium">{incidentDateLabel}</p>
                       </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Fecha de ocurrencia
+                        </p>
+                        <p className="font-medium">
+                          {fmtDate((detail as any).occurredAt) ?? "—"}
+                        </p>
+                      </div>
                     </div>
 
                     <Separator />
@@ -740,6 +754,14 @@ export default function IncidentDetailSheet({
                     </CardContent>
                   </Card>
                 )}
+
+                <SubtaskSection
+                  incidentId={(detail as any).id}
+                  initialSubtasks={(detail as any).subtasks}
+                  isSupervisor={isSupervisor}
+                  isClosed={isClosed}
+                  onReload={onReload}
+                />
 
                 {closure.hasClosure && (
                   <Card className="border-muted/60 mt-5">

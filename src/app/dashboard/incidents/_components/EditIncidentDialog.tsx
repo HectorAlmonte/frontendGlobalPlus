@@ -36,6 +36,8 @@ type FormState = {
   areaId: string;
   observedKind: ObservedKind;
   observedUserId: string;
+  observedOtherDetail: string;
+  occurredAt: string;
   causes: string;
 };
 
@@ -67,6 +69,8 @@ export default function EditIncidentDialog({
     areaId: "",
     observedKind: "NONE",
     observedUserId: "",
+    observedOtherDetail: "",
+    occurredAt: "",
     causes: "",
   });
 
@@ -75,6 +79,14 @@ export default function EditIncidentDialog({
 
   useEffect(() => {
     if (open && detail) {
+      const oAt = (detail as any).occurredAt;
+      let occurredAtLocal = "";
+      if (oAt) {
+        const dt = new Date(oAt);
+        if (!Number.isNaN(dt.getTime())) {
+          occurredAtLocal = dt.toISOString().slice(0, 16);
+        }
+      }
       setForm({
         title: detail.title ?? "",
         type: detail.type,
@@ -83,6 +95,8 @@ export default function EditIncidentDialog({
         areaId: detail.area?.id ?? "",
         observedKind: detail.observedKind ?? "NONE",
         observedUserId: detail.observedUser?.id ?? "",
+        observedOtherDetail: (detail as any).observedOtherDetail ?? "",
+        occurredAt: occurredAtLocal,
         causes: normalizeCausesToString((detail as any).causes),
       });
       setErr(null);
@@ -109,7 +123,8 @@ export default function EditIncidentDialog({
           ? form.causes.split(",").map((s) => s.trim()).filter(Boolean)
           : null;
 
-      const hasWorker = Boolean(form.observedUserId?.trim());
+      const kind = form.observedKind;
+      const hasWorker = kind === "USER" && Boolean(form.observedUserId?.trim());
 
       const body: Record<string, unknown> = {
         title: form.title.trim() || null,
@@ -118,8 +133,10 @@ export default function EditIncidentDialog({
         locationLabel: form.locationLabel.trim() || null,
         areaId: form.areaId.trim() || null,
         causes: causesArr,
-        observedKind: hasWorker ? "USER" : "NONE",
+        observedKind: kind === "OTRO" ? "OTRO" : hasWorker ? "USER" : "NONE",
         observedUserId: hasWorker ? form.observedUserId : null,
+        observedOtherDetail: kind === "OTRO" ? (form.observedOtherDetail.trim() || null) : null,
+        occurredAt: form.occurredAt || null,
       };
 
       await apiPatchIncident(detail.id, body);
@@ -140,12 +157,12 @@ export default function EditIncidentDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (saving) return; onOpenChange(v); }}>
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden">
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Editar incidencia</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[calc(85vh-64px)] overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto pr-2">
           <div className="space-y-5">
             {err && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -206,32 +223,81 @@ export default function EditIncidentDialog({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>Trabajador (opcional)</Label>
-                  {hasObservedWorker && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearObservedWorker}
-                      disabled={saving}
-                      className="h-8 px-2 gap-1"
-                      title="Quitar trabajador"
-                    >
-                      <X className="h-4 w-4" />
-                      Quitar
-                    </Button>
-                  )}
-                </div>
-                <SearchSelect
-                  value={form.observedUserId}
-                  onChange={(id) => setForm((p) => ({ ...p, observedUserId: id }))}
-                  placeholder="Selecciona trabajador..."
-                  searchPlaceholder="Buscar por DNI o nombre..."
-                  emptyText="No se encontraron trabajadores"
-                  fetcher={apiSearchObservedUsers}
+                <Label>Fecha de ocurrencia (opcional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.occurredAt}
+                  onChange={(e) => setForm((p) => ({ ...p, occurredAt: e.target.value }))}
+                  disabled={saving}
                 />
               </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Observado</Label>
+                <Select
+                  value={form.observedKind}
+                  onValueChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      observedKind: v as ObservedKind,
+                      observedUserId: v !== "USER" ? "" : p.observedUserId,
+                      observedOtherDetail: v !== "OTRO" ? "" : p.observedOtherDetail,
+                    }))
+                  }
+                  disabled={saving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">Ninguno</SelectItem>
+                    <SelectItem value="USER">Trabajador</SelectItem>
+                    <SelectItem value="OTRO">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {form.observedKind === "USER" && (
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Trabajador</Label>
+                    {hasObservedWorker && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearObservedWorker}
+                        disabled={saving}
+                        className="h-8 px-2 gap-1"
+                        title="Quitar trabajador"
+                      >
+                        <X className="h-4 w-4" />
+                        Quitar
+                      </Button>
+                    )}
+                  </div>
+                  <SearchSelect
+                    value={form.observedUserId}
+                    onChange={(id) => setForm((p) => ({ ...p, observedUserId: id }))}
+                    placeholder="Selecciona trabajador..."
+                    searchPlaceholder="Buscar por DNI o nombre..."
+                    emptyText="No se encontraron trabajadores"
+                    fetcher={apiSearchObservedUsers}
+                  />
+                </div>
+              )}
+
+              {form.observedKind === "OTRO" && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Detalle del observado</Label>
+                  <Input
+                    value={form.observedOtherDetail}
+                    onChange={(e) => setForm((p) => ({ ...p, observedOtherDetail: e.target.value }))}
+                    placeholder="Ej: Contratista externo, visitante..."
+                    disabled={saving}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2 sm:col-span-2">
                 <Label>Detalles</Label>
@@ -260,7 +326,7 @@ export default function EditIncidentDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="shrink-0 gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>

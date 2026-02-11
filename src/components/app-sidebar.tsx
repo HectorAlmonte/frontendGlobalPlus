@@ -66,6 +66,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useWord } from "@/context/AppContext";
+import { hasRole } from "@/lib/utils";
 
 const iconMap: Record<string, any> = {
   ClipboardPen,
@@ -296,8 +297,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (loadingUser) return null;
 
   const isDashboardHome = pathname === "/dashboard";
-  const roleKey = user?.role?.key;
-  const hasFullAccess = ["ADMIN", "SUPERVISOR"].includes(roleKey ?? "");
+  const hasFullAccess = hasRole(user, "ADMIN") || hasRole(user, "SUPERVISOR");
 
   return (
     <Sidebar

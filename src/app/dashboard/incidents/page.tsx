@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, ListChecks } from "lucide-react";
 
 import IncidentsTable from "./_components/IncidentsTable";
 import IncidentDetailSheet from "./_components/IncidentDetailSheet";
@@ -15,6 +16,7 @@ import IncidentKpiDashboard from "./_components/IncidentKpiDashboard";
 import EditIncidentDialog from "./_components/EditIncidentDialog";
 import EditCorrectiveDialog from "./_components/EditCorrectiveDialog";
 import EditClosureDialog from "./_components/EditClosureDialog";
+import SubtasksReportView from "./_components/SubtasksReportView";
 
 import type {
   CreateIncidentInput,
@@ -350,35 +352,71 @@ export default function IncidentsPage() {
         </div>
       )}
 
-      {/* ===== TABLA ===== */}
-      <div className="rounded-xl border bg-card shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="space-y-0.5">
-            <h2 className="text-sm font-semibold">Listado de incidencias</h2>
-            <p className="text-xs text-muted-foreground">
-              {tableFilters.dateFrom || tableFilters.dateTo
-                ? "Mostrando incidencias en el rango seleccionado."
-                : "Mostrando todas las incidencias."}
-            </p>
+      {/* ===== TABS: LISTADO / OBJETIVOS ===== */}
+      <Tabs defaultValue="listado" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="listado">Listado</TabsTrigger>
+          <TabsTrigger value="objetivos" className="gap-1.5">
+            <ListChecks className="h-4 w-4" />
+            Objetivos
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="listado">
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4">
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-semibold">Listado de incidencias</h2>
+                <p className="text-xs text-muted-foreground">
+                  {tableFilters.dateFrom || tableFilters.dateTo
+                    ? "Mostrando incidencias en el rango seleccionado."
+                    : "Mostrando todas las incidencias."}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="p-4">
+              <IncidentsTable
+                loading={loading}
+                items={filtered}
+                filters={tableFilters}
+                onFiltersChange={setTableFilters}
+                onOpen={(id) => {
+                  setSelectedId(id);
+                  setOpenSheet(true);
+                }}
+                onRefresh={fetchList}
+              />
+            </div>
           </div>
-        </div>
+        </TabsContent>
 
-        <Separator />
+        <TabsContent value="objetivos">
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4">
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-semibold">Reporte de objetivos</h2>
+                <p className="text-xs text-muted-foreground">
+                  Objetivos de todas las incidencias agrupados por incidencia.
+                </p>
+              </div>
+            </div>
 
-        <div className="p-4">
-          <IncidentsTable
-            loading={loading}
-            items={filtered}
-            filters={tableFilters}
-            onFiltersChange={setTableFilters}
-            onOpen={(id) => {
-              setSelectedId(id);
-              setOpenSheet(true);
-            }}
-            onRefresh={fetchList}
-          />
-        </div>
-      </div>
+            <Separator />
+
+            <div className="p-4">
+              <SubtasksReportView
+                onOpenIncident={(id) => {
+                  setSelectedId(id);
+                  setOpenSheet(true);
+                }}
+              />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* ===== PANEL DETALLE ===== */}
       <IncidentDetailSheet

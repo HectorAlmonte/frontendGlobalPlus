@@ -17,7 +17,8 @@ export type IncidentFileStage =
 export type ObservedKind =
   | "NONE"
   | "USER"
-  | "AREA";
+  | "AREA"
+  | "OTRO";
 
 /**
  * Tipos de incidencia (estandarizados)
@@ -27,6 +28,39 @@ export type IncidentType =
   | "INCIDENTE"
   | "CONDICION_SUB_ESTANDAR"
   | "ACTO_SUB_ESTANDAR";
+
+/**
+ * =========================
+ * SUBTAREAS / OBJETIVOS
+ * =========================
+ */
+
+export type IncidentSubtask = {
+  id: string;
+  incidentId: string;
+  title: string;
+  detail?: string | null;
+  assignedTo?: {
+    id: string;
+    username: string;
+    employee?: {
+      nombres: string;
+      apellidos: string;
+    };
+  } | null;
+  isCompleted: boolean;
+  completedAt?: string | null;
+  createdBy?: {
+    id: string;
+    username: string;
+    employee?: {
+      nombres: string;
+      apellidos: string;
+    };
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 /**
  * =========================
@@ -43,6 +77,9 @@ export type IncidentListItem = {
   number: number;
   status: IncidentStatus;
   reportedAt: string;
+  occurredAt?: string | null;
+
+  _count?: { subtasks: number; subtasksCompleted?: number };
 
   // ✅ NUEVO (fallback UI)
   areaNameSnapshot?: string | null;
@@ -94,12 +131,14 @@ export type IncidentFile = {
 
 export type IncidentDetail = IncidentListItem & {
   files: IncidentFile[];
+  subtasks?: IncidentSubtask[];
 
   locationLabel?: string | null;
 
   causes?: any; // Json (array/string según backend)
 
   observedKind?: ObservedKind;
+  observedOtherDetail?: string | null;
 
   observedUser?: {
     id: string;
@@ -161,6 +200,23 @@ export type IncidentStats = {
  * =========================
  */
 
+/**
+ * =========================
+ * SUBTAREA CON INCIDENCIA (reporte global)
+ * =========================
+ */
+
+export type SubtaskWithIncident = IncidentSubtask & {
+  incident: {
+    id: string;
+    number: number;
+    title: string | null;
+    status: IncidentStatus;
+    area?: { id: string; name: string } | null;
+    corrective?: { priority: "BAJA" | "MEDIA" | "ALTA" } | null;
+  };
+};
+
 export type CreateIncidentInput = {
   title: string;
   type: IncidentType;
@@ -173,6 +229,9 @@ export type CreateIncidentInput = {
   observedKind: ObservedKind;
   observedUserId: string;
   observedAreaId: string;
+  observedOtherDetail?: string;
+
+  occurredAt?: string;
 
   causes: string;
   files: File[];

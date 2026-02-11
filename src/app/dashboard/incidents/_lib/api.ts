@@ -1,5 +1,5 @@
 // incidents/_lib/api.ts
-import { CreateIncidentInput, IncidentDetail, IncidentListItem, IncidentPeriod, IncidentStats, IncidentStatus } from "./types";
+import { CreateIncidentInput, IncidentDetail, IncidentListItem, IncidentPeriod, IncidentStats, IncidentStatus, IncidentSubtask, SubtaskWithIncident } from "./types";
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000";
@@ -249,6 +249,92 @@ export async function apiDeleteIncidentFile(fileId: string) {
 /**
  * =========================
  * SEARCH SELECTS (Observed)
+ * =========================
+ */
+
+/**
+ * =========================
+ * SUBTAREAS / OBJETIVOS
+ * =========================
+ */
+
+export async function apiListAllSubtasks(params?: {
+  status?: "pending" | "completed" | "all";
+  q?: string;
+}): Promise<SubtaskWithIncident[]> {
+  const url = new URL(`${API_BASE}/api/incidents/subtasks`);
+  if (params?.status && params.status !== "all") url.searchParams.set("status", params.status);
+  if (params?.q) url.searchParams.set("q", params.q);
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) throw new Error("Error listando objetivos globales");
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function apiListSubtasks(incidentId: string): Promise<IncidentSubtask[]> {
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/subtasks`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Error listando objetivos");
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function apiCreateSubtask(
+  incidentId: string,
+  body: { title: string; detail?: string; assignedToId?: string }
+): Promise<IncidentSubtask> {
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/subtasks`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = "Error al crear objetivo";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function apiUpdateSubtask(
+  incidentId: string,
+  subtaskId: string,
+  body: Record<string, unknown>
+): Promise<IncidentSubtask> {
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/subtasks/${subtaskId}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = "Error al actualizar objetivo";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function apiDeleteSubtask(
+  incidentId: string,
+  subtaskId: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/subtasks/${subtaskId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    let msg = "Error al eliminar objetivo";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+}
+
+/**
+ * =========================
+ * SEARCH SELECTS (Áreas)
  * =========================
  */
 

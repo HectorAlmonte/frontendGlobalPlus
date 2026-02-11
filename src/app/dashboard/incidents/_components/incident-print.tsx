@@ -338,21 +338,23 @@ function PrintOnlyDocument(props: {
         {filesAll.length === 0 ? (
           <div className="print-text print-muted">Sin evidencias adjuntas.</div>
         ) : (
-          <div className="print-files-grid">
+          <div className="print-evidence-list">
             {filesAll.map((f: any) => (
               <div
                 key={String(f.id || f.__url || f.__name)}
-                className="print-file"
+                className="print-evidence-item"
               >
                 {f.__isImg && f.__url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.__url} alt="Evidencia" className="print-thumb" />
+                  <img src={f.__url} alt="Evidencia" className="print-evidence-img" />
                 ) : (
-                  <div className="print-thumb" />
+                  <div className="print-evidence-placeholder" />
                 )}
-                <div className="print-fname">{String(f.__name)}</div>
-                <div className="print-fmeta">
-                  {String(f.__stageEs)} • {String(f.__mime)}
+                <div className="print-evidence-caption">
+                  <span className="print-fname">{String(f.__name)}</span>
+                  <span className="print-fmeta">
+                    {String(f.__stageEs)} • {String(f.__mime)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -624,32 +626,46 @@ function getPrintCss() {
     color: var(--ink);
   }
 
-  .print-files-grid {
-    display:grid;
-    grid-template-columns: repeat(3, minmax(0,1fr));
+  .print-evidence-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
 
-  .print-file {
+  .print-evidence-item {
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 5px;
     background: #fff;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
-  .print-thumb {
+  .print-evidence-img {
+    display: block;
     width: 100%;
-    height: 42px;
-    object-fit: cover;
+    height: 120px;
+    object-fit: contain;
     border-radius: 8px;
     border: 1px solid var(--line);
     background: var(--soft);
   }
 
+  .print-evidence-placeholder {
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--soft);
+  }
+
+  .print-evidence-caption {
+    margin-top: 3px;
+  }
+
   .print-fname {
     font-size: 8px;
     font-weight: 900;
-    margin-top: 4px;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -662,6 +678,7 @@ function getPrintCss() {
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
+    flex-shrink: 0;
   }
 
   .print-footer{
@@ -753,6 +770,14 @@ export async function printIncidentToPdf(args: {
   const resolvedHeader = header
     ? { ...header, logoSrc: logoDataUrl ?? logoSrc }
     : undefined;
+
+  // Pre-load evidence images as data URLs so they render in print
+  for (const f of payload.filesAll) {
+    if (f.__isImg && f.__url) {
+      const dataUrl = await preloadImageAsDataUrl(f.__url);
+      if (dataUrl) f.__url = dataUrl;
+    }
+  }
 
   const portal = document.createElement("div");
   portal.id = "__incident_print_portal";

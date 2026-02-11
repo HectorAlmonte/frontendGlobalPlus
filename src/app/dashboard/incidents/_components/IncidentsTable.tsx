@@ -19,7 +19,7 @@ import { FilterPopover } from "@/components/filter-popover";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 import type { IncidentListItem, IncidentStatus } from "../_lib/types";
-import { statusBadge } from "../_lib/utils";
+import { statusBadge, priorityBadge } from "../_lib/utils";
 
 /* -- Helpers -- */
 const formatFolio = (num?: number) => {
@@ -174,6 +174,9 @@ export default function IncidentsTable({
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2">Titulo</th>
+              <th className="px-3 py-2">Area</th>
+              <th className="px-3 py-2">Prioridad</th>
+              <th className="px-3 py-2">Objetivos</th>
               <th className="px-3 py-2">Reportado por</th>
               <th className="px-3 py-2">Fecha</th>
               <th className="px-3 py-2 text-right">Acciones</th>
@@ -185,7 +188,7 @@ export default function IncidentsTable({
               <tr>
                 <td
                   className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={7}
+                  colSpan={10}
                 >
                   {loading ? "Cargando..." : "No hay incidencias para mostrar."}
                 </td>
@@ -211,11 +214,35 @@ export default function IncidentsTable({
                   >
                     {it.title || <span className="text-muted-foreground">{"\u2014"}</span>}
                   </button>
-                  {it.area?.name && (
-                    <div className="text-xs text-muted-foreground">
-                      {it.area.name}
-                    </div>
-                  )}
+                </td>
+
+                <td className="px-3 py-2 text-xs">
+                  {it.area?.name || it.areaNameSnapshot || <span className="text-muted-foreground">{"\u2014"}</span>}
+                </td>
+
+                <td className="px-3 py-2">
+                  {priorityBadge(it.corrective?.priority)}
+                </td>
+
+                <td className="px-3 py-2">
+                  {(() => {
+                    const total = it._count?.subtasks ?? 0;
+                    const done = it._count?.subtasksCompleted ?? 0;
+                    if (total === 0) return <span className="text-xs text-muted-foreground">{"\u2014"}</span>;
+                    const allDone = done === total;
+                    return (
+                      <Badge
+                        variant="secondary"
+                        className={
+                          allDone
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        }
+                      >
+                        {done}/{total} obj.
+                      </Badge>
+                    );
+                  })()}
                 </td>
 
                 <td className="px-3 py-2">

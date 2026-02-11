@@ -3,6 +3,7 @@ type UserType = {
   name: string;
   email: string;
   role: UserRole;
+  roles?: UserRole[];
   dni: string;
 };
 

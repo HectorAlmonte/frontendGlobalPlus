@@ -63,6 +63,8 @@ const initialState: CreateIncidentInput = {
   observedKind: "NONE",
   observedUserId: "",
   observedAreaId: "",
+  observedOtherDetail: "",
+  occurredAt: "",
   causes: "",
   files: [],
 };
@@ -191,13 +193,16 @@ export default function CreateIncidentDialog({
   async function handleSubmit() {
     if (!canSubmit || !allowed) return;
 
-    const hasWorker = Boolean(form.observedUserId && form.observedUserId.trim());
+    const kind = form.observedKind;
+    const hasWorker = kind === "USER" && Boolean(form.observedUserId?.trim());
 
     const payload: CreateIncidentInput = {
       ...form,
-      observedKind: hasWorker ? "USER" : "NONE",
+      observedKind: kind === "OTRO" ? "OTRO" : hasWorker ? "USER" : "NONE",
       observedUserId: hasWorker ? form.observedUserId : "",
       observedAreaId: "",
+      observedOtherDetail: kind === "OTRO" ? form.observedOtherDetail : "",
+      occurredAt: form.occurredAt || undefined,
     };
 
     await onCreate(payload);
@@ -340,45 +345,84 @@ export default function CreateIncidentDialog({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>Trabajador (opcional)</Label>
-
-                  {hasObservedWorker ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearObservedWorker}
-                      disabled={creating || !allowed}
-                      className="h-8 px-2 gap-1"
-                      title="Quitar trabajador"
-                    >
-                      <X className="h-4 w-4" />
-                      Quitar
-                    </Button>
-                  ) : null}
-                </div>
-
-                <SearchSelect
-                  value={form.observedUserId}
-                  onChange={(id) => setForm((p) => ({ ...p, observedUserId: id }))}
-                  placeholder="Selecciona trabajador..."
-                  searchPlaceholder="Buscar por DNI o nombre..."
-                  emptyText="No se encontraron trabajadores"
-                  fetcher={safeSearchUsers}
+                <Label>Fecha de ocurrencia (opcional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.occurredAt ?? ""}
+                  onChange={(e) => setForm((p) => ({ ...p, occurredAt: e.target.value }))}
+                  disabled={creating || !allowed}
                 />
-
-                {!hasObservedWorker ? (
-                  <p className="text-xs text-muted-foreground">
-                    Si no seleccionas trabajador, la incidencia quedará como "Sin
-                    trabajador".
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Trabajador asignado. Si te equivocaste, usa <b>Quitar</b>.
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Si difiere de la fecha de reporte, indica cuándo ocurrió realmente.
+                </p>
               </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Observado</Label>
+                <Select
+                  value={form.observedKind}
+                  onValueChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      observedKind: v as "NONE" | "USER" | "OTRO",
+                      observedUserId: v !== "USER" ? "" : p.observedUserId,
+                      observedOtherDetail: v !== "OTRO" ? "" : p.observedOtherDetail,
+                    }))
+                  }
+                  disabled={creating || !allowed}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">Ninguno</SelectItem>
+                    <SelectItem value="USER">Trabajador</SelectItem>
+                    <SelectItem value="OTRO">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {form.observedKind === "USER" && (
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Trabajador</Label>
+                    {hasObservedWorker && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearObservedWorker}
+                        disabled={creating || !allowed}
+                        className="h-8 px-2 gap-1"
+                        title="Quitar trabajador"
+                      >
+                        <X className="h-4 w-4" />
+                        Quitar
+                      </Button>
+                    )}
+                  </div>
+                  <SearchSelect
+                    value={form.observedUserId}
+                    onChange={(id) => setForm((p) => ({ ...p, observedUserId: id }))}
+                    placeholder="Selecciona trabajador..."
+                    searchPlaceholder="Buscar por DNI o nombre..."
+                    emptyText="No se encontraron trabajadores"
+                    fetcher={safeSearchUsers}
+                  />
+                </div>
+              )}
+
+              {form.observedKind === "OTRO" && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Detalle del observado</Label>
+                  <Input
+                    value={form.observedOtherDetail ?? ""}
+                    onChange={(e) => setForm((p) => ({ ...p, observedOtherDetail: e.target.value }))}
+                    placeholder="Ej: Contratista externo, visitante..."
+                    disabled={creating || !allowed}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2 sm:col-span-2">
                 <Label>Detalles</Label>

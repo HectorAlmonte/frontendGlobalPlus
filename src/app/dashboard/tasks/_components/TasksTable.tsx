@@ -128,6 +128,13 @@ export default function TasksTable({
 
   const fetchWorkAreas = useCallback((q: string) => apiSearchWorkAreas(q), []);
 
+  // Debounce text search
+  useEffect(() => {
+    const timer = setTimeout(() => { load(); }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
   const load = async () => {
     try {
       setLoading(true);
@@ -152,7 +159,7 @@ export default function TasksTable({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
+  }, [refreshKey, statusFilter, priorityFilter, workAreaFilter, includeDeleted, dateFrom, dateTo]);
 
   const askDelete = (t: TaskRow) => {
     setSelected(t);
@@ -211,11 +218,7 @@ export default function TasksTable({
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por título..."
             className="w-full sm:w-[260px]"
-            onKeyDown={(e) => e.key === "Enter" && load()}
           />
-          <Button variant="outline" onClick={load} disabled={loading}>
-            Buscar
-          </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -307,9 +310,6 @@ export default function TasksTable({
         <span>
           {filteredRows.length} resultado{filteredRows.length !== 1 ? "s" : ""}
         </span>
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={load}>
-          Aplicar filtros
-        </Button>
       </div>
 
       <Separator />
