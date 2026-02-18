@@ -297,7 +297,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (loadingUser) return null;
 
   const isDashboardHome = pathname === "/dashboard";
-  const hasFullAccess = hasRole(user, "ADMIN") || hasRole(user, "SUPERVISOR");
+  const hasFullAccess = !hasRole(user, "TRABAJADOR");
 
   return (
     <Sidebar

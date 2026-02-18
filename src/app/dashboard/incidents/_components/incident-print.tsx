@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 
-import { IncidentDetail } from "../_lib/types";
+import { IncidentDetail, IncidentSubtask } from "../_lib/types";
 import { normalizeCauses, statusBadge } from "../_lib/utils";
 
 /* =========================
@@ -141,6 +141,7 @@ function PrintOnlyDocument(props: {
   filesAll: any[];
   corrective: any;
   closure: any;
+  subtasks: IncidentSubtask[];
   header?: {
     codigo?: string;
     version?: string;
@@ -159,6 +160,7 @@ function PrintOnlyDocument(props: {
     filesAll,
     corrective,
     closure,
+    subtasks,
     header,
   } = props;
 
@@ -193,6 +195,19 @@ function PrintOnlyDocument(props: {
           <div className="col-span-2">
             <div className="print-label">Título</div>
             <div className="print-strong">{(detail as any).title ?? "—"}</div>
+          </div>
+
+          <div>
+            <div className="print-label">Folio</div>
+            <div className="print-strong">
+              {(detail as any).number != null
+                ? `#${String((detail as any).number).padStart(3, "0")}`
+                : incidentIdLabel}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="print-label">Fecha de reporte</div>
+            <div className="print-strong">{incidentDateLabel}</div>
           </div>
         </div>
 
@@ -331,6 +346,37 @@ function PrintOnlyDocument(props: {
         </div>
       )}
 
+      {/* ===== Objetivos ===== */}
+      {subtasks.length > 0 && (
+        <div className="print-section print-card">
+          <div className="print-section-title">
+            Objetivos ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length} completados)
+          </div>
+          <div className="print-subtask-list">
+            {subtasks.map((st) => (
+              <div key={st.id} className="print-subtask-row">
+                <span className={`print-subtask-check ${st.isCompleted ? "done" : ""}`}>
+                  {st.isCompleted ? "✓" : "○"}
+                </span>
+                <div className="print-subtask-body">
+                  <span className={`print-subtask-title ${st.isCompleted ? "done" : ""}`}>
+                    {st.title}
+                  </span>
+                  {st.detail && (
+                    <span className="print-subtask-detail">{st.detail}</span>
+                  )}
+                  {st.assignedTo && (
+                    <span className="print-subtask-assigned">
+                      Asignado: {pickFullName(st.assignedTo)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ===== Evidencias ===== */}
       <div className="print-section print-card">
         <div className="print-section-title">Evidencias</div>
@@ -460,6 +506,8 @@ function buildPrintPayload(detail: IncidentDetail, selectedId?: string | null) {
   const hasClosure =
     d.status === "CLOSED" || !!clo || !!closureDetail || !!closedAt || !!closedBy;
 
+  const subtasks: IncidentSubtask[] = Array.isArray(d.subtasks) ? d.subtasks : [];
+
   return {
     incidentIdLabel,
     incidentDateLabel,
@@ -467,6 +515,7 @@ function buildPrintPayload(detail: IncidentDetail, selectedId?: string | null) {
     observedLabel,
     causes,
     filesAll,
+    subtasks,
     corrective: {
       hasCorrective,
       correctiveAction,
@@ -627,8 +676,8 @@ function getPrintCss() {
   }
 
   .print-evidence-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -639,12 +688,15 @@ function getPrintCss() {
     background: #fff;
     break-inside: avoid;
     page-break-inside: avoid;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 50%;
   }
 
   .print-evidence-img {
     display: block;
     width: 100%;
-    height: 120px;
+    max-height: 180px;
     object-fit: contain;
     border-radius: 8px;
     border: 1px solid var(--line);
@@ -679,6 +731,53 @@ function getPrintCss() {
     text-overflow:ellipsis;
     white-space:nowrap;
     flex-shrink: 0;
+  }
+
+  /* ===== SUBTASKS / OBJETIVOS ===== */
+  .print-subtask-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .print-subtask-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--soft);
+  }
+  .print-subtask-row:last-child { border-bottom: none; }
+  .print-subtask-check {
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--muted);
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .print-subtask-check.done { color: #16a34a; }
+  .print-subtask-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .print-subtask-title {
+    font-size: 8.8px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .print-subtask-title.done {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .print-subtask-detail {
+    font-size: 8px;
+    color: var(--muted);
+  }
+  .print-subtask-assigned {
+    font-size: 7.6px;
+    color: var(--muted);
+    font-style: italic;
   }
 
   .print-footer{
@@ -800,6 +899,7 @@ export async function printIncidentToPdf(args: {
       filesAll={payload.filesAll}
       corrective={payload.corrective}
       closure={payload.closure}
+      subtasks={payload.subtasks}
       header={resolvedHeader}
     />
   );

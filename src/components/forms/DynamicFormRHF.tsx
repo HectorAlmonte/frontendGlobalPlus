@@ -381,7 +381,10 @@ function DynamicField({
   control: any;
 }) {
   const description = field.description || `Ingresa ${field.label.toLowerCase()}`;
-  const options: string[] = Array.isArray(field.options) ? field.options : [];
+  const rawOptions: any[] = Array.isArray(field.options) ? field.options : [];
+  const options = rawOptions.map((opt: any) =>
+    typeof opt === "string" ? { value: opt, label: opt } : { value: opt.value, label: opt.label }
+  );
 
   const t = normalizeType(field.type);
 
@@ -412,8 +415,8 @@ function DynamicField({
               </SelectTrigger>
               <SelectContent>
                 {options.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -755,14 +755,6 @@ export default function IncidentDetailSheet({
                   </Card>
                 )}
 
-                <SubtaskSection
-                  incidentId={(detail as any).id}
-                  initialSubtasks={(detail as any).subtasks}
-                  isSupervisor={isSupervisor}
-                  isClosed={isClosed}
-                  onReload={onReload}
-                />
-
                 {closure.hasClosure && (
                   <Card className="border-muted/60 mt-5">
                     <CardHeader className="space-y-1">
@@ -815,6 +807,14 @@ export default function IncidentDetailSheet({
                     </CardContent>
                   </Card>
                 )}
+
+                <SubtaskSection
+                  incidentId={(detail as any).id}
+                  initialSubtasks={(detail as any).subtasks}
+                  isSupervisor={isSupervisor}
+                  isClosed={isClosed}
+                  onReload={onReload}
+                />
               </>
             )}
           </div>

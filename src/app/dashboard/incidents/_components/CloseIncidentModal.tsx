@@ -43,6 +43,7 @@ type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   incidentId?: string | null;
+  incidentFolio?: string | null;
   loading?: boolean;
   onSubmit: (payload: CloseIncidentPayload) => Promise<void> | void;
   preventCloseWhileSaving?: boolean;
@@ -124,6 +125,7 @@ export default function CloseIncidentModal({
   open,
   onOpenChange,
   incidentId,
+  incidentFolio,
   loading = false,
   onSubmit,
   preventCloseWhileSaving = true,
@@ -241,7 +243,7 @@ export default function CloseIncidentModal({
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Incidencia</span>
               <Badge variant="secondary" className="font-mono">
-                {incidentId || "—"}
+                {incidentFolio || incidentId || "—"}
               </Badge>
             </div>
           </div>

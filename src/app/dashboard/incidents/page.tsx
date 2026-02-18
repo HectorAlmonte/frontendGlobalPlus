@@ -457,9 +457,15 @@ export default function IncidentsPage() {
         open={closeOpen}
         onOpenChange={setCloseOpen}
         incidentId={closeIncidentId}
+        incidentFolio={
+          detail?.number != null
+            ? `#${String(detail.number).padStart(3, "0")}`
+            : null
+        }
         loading={closing}
         onSubmit={handleCloseSubmit}
         profile={profile}
+        roleKey={roleKey}
       />
 
       <EditIncidentDialog

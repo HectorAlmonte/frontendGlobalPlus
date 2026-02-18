@@ -41,14 +41,14 @@ type StaffRow = {
   fechaIngreso: string | null;
   isDeleted: boolean;
 
-  role: RoleDTO;
+  roles: RoleDTO[];
   user: null | {
     id: string;
     username: string;
     isActive: boolean;
     isDeleted: boolean;
     lastLoginAt: string | null;
-    role: RoleDTO;
+    roles: RoleDTO[];
   };
 };
 
@@ -243,7 +243,7 @@ export default function StaffTable({
                 <th className="px-4 py-3 font-medium">Nombre</th>
                 <th className="px-4 py-3 font-medium">Correo</th>
                 <th className="px-4 py-3 font-medium">Cargo</th>
-                <th className="px-4 py-3 font-medium">Rol</th>
+                <th className="px-4 py-3 font-medium">Roles</th>
                 <th className="px-4 py-3 font-medium">Cuenta</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 font-medium text-right">Acciones</th>
@@ -253,7 +253,10 @@ export default function StaffTable({
             <tbody>
               {filtered.map((r) => {
                 const fullName = `${r.nombres} ${r.apellidos}`.trim();
-                const roleLabel = r.role?.name || r.role?.key || "-";
+                const roleLabel =
+                  r.roles && r.roles.length > 0
+                    ? r.roles.map((rl) => rl.name).join(", ")
+                    : "-";
                 const emailLabel =
                   !r.email || r.email === "undefined" ? "-" : r.email;
 

@@ -3,24 +3,24 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = ["/", "/login", "/pricing", "/contacto", "/change-password"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const token = request.cookies.get("token")?.value;
 
   const isPublic = PUBLIC_ROUTES.includes(path);
   const isDashboard = path.startsWith("/dashboard");
 
-  // 🔴 No hay token y quiere dashboard
+  // No hay token y quiere dashboard
   if (!token && isDashboard) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // 🟢 Hay token y quiere login -> manda a dashboard
+  // Hay token y quiere login -> manda a dashboard
   if (token && path === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // (Opcional recomendado) si no hay token y NO es pública -> login
+  // Si no hay token y NO es pública -> login
   if (!token && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
