@@ -10,7 +10,12 @@
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
       "Bash(findstr:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "WebSearch",
+      "Bash(del \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\\\\src\\\\middleware.ts\")",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

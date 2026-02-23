@@ -37,6 +37,7 @@ src/
 │   │   ├── visitas/         # Visitas
 │   │   ├── seguridad/       # Seguridad
 │   │   ├── tasks/           # Tareas
+│   │   ├── staff/           # Gestión de personal (multi-rol)
 │   │   └── me/              # Perfil de usuario
 │   └── ...
 ├── components/
@@ -46,7 +47,7 @@ src/
 ├── context/
 │   └── AppContext.tsx        # Auth context (useWord)
 └── lib/
-    └── utils.ts             # cn() helper
+    └── utils.ts             # cn() helper + hasRole()
 ```
 
 ## Estructura de cada módulo
@@ -75,14 +76,32 @@ Cada módulo define su propio `apiFetch<T>()` con:
 
 Para uploads con FormData, usar `fetch` directo SIN Content-Type header (el browser lo pone automáticamente con boundary).
 
-### Autenticación y roles
+### Autenticación y roles (multi-rol)
+
+El sistema soporta múltiples roles por usuario. Usar siempre `hasRole()` de `@/lib/utils`:
 
 ```tsx
+import { hasRole } from "@/lib/utils"
 const { user, loadingUser } = useWord(); // de @/context/AppContext
-const roleKey = (user as any)?.role?.key ?? "";
-// Roles: "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD"
-const isAdmin = !loadingUser && roleKey === "ADMIN";
+
+// ✅ Correcto — soporta multi-rol
+const isAdmin = hasRole(user, "ADMIN")
+const isSupervisor = hasRole(user, "SUPERVISOR")
+
+// ❌ Evitar — solo funciona con rol único (legacy)
+const roleKey = (user as any)?.role?.key
 ```
+
+`hasRole` comprueba tanto `user.roles[].key` (multi-rol) como `user.role.key` (fallback legacy).
+
+Roles disponibles: `"ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD"`
+
+### Permisos por acción (incidencias)
+
+- **Crear incidencia**: ADMIN, SUPERVISOR, SEGURIDAD siempre. TRABAJADOR solo dentro de su turno.
+- **Registrar correctivo**: ADMIN, SUPERVISOR, SEGURIDAD
+- **Cerrar incidencia**: solo ADMIN y SEGURIDAD
+- **Completar objetivos**: cualquier rol si la incidencia no está CLOSED
 
 ### Tablas con paginación client-side
 
@@ -115,6 +134,39 @@ El fetcher debe devolver `{ value: string; label: string }[]`.
   <div className="flex-1 overflow-y-auto">...</div>
 </SheetContent>
 ```
+
+### Charts (recharts)
+
+- Usar siempre `<ResponsiveContainer>` con altura fija (no dinámica) para evitar overflow en grids
+- En grids de 2 columnas, agregar `items-start` para que las columnas no se estiren: `grid lg:grid-cols-2 lg:items-start`
+- `resolutionRate` del backend puede venir como decimal (0.38) o entero (38) — normalizar con: `stats.resolutionRate > 1 ? Math.round(stats.resolutionRate) : Math.round(stats.resolutionRate * 100)`
+
+## Módulo de Incidencias — detalles importantes
+
+- **Tipos válidos**: `HALLAZGO_ANORMAL | INCIDENTE | CONDICION_SUB_ESTANDAR | ACTO_SUB_ESTANDAR`
+- **Observado**: usa `observedEmployeeId` (FK a Employee, no a User) — permite seleccionar cualquier empleado aunque no tenga cuenta
+- **Búsqueda de observado**: `GET /api/staff/search` → devuelve `{ id: employeeId, label: "Nombre - DNI" }[]`, filtra por rol TRABAJADOR activo
+- **Display del observado**: `observedEmployee: { id, nombres, apellidos, dni }` en el detalle
+- **Objetivos (subtasks)**: se pueden completar desde `SubtaskSection` (en detalle) y desde `SubtasksReportView` (vista global)
+
+## Módulo de Staff — detalles importantes
+
+- Multi-rol: `StaffRow.roles: RoleDTO[]` y `StaffCreateInput.roleIds: string[]`
+- `ROLES_WITH_ACCOUNT = ["ADMIN", "SUPERVISOR", "SEGURIDAD"]` — estos roles crean cuenta de usuario automáticamente. TRABAJADOR no crea cuenta.
+- Roles para el select: `GET /api/roles?active=1` → `{ id, name, key }[]`
+
+## Perfil de usuario (`/dashboard/me`)
+
+- Soporta multi-rol: lee `user.roles[]` con fallback a `user.role` (singular)
+- `roleKey` efectivo se deriva por prioridad: ADMIN > SUPERVISOR > SEGURIDAD > TRABAJADOR
+- El endpoint `GET /api/users/me/profile` debe devolver `user.roles[]`
+
+## Dashboard principal
+
+- Enfocado en incidencias (sistema SST)
+- Datos: `GET /api/incidents/stats` devuelve `{ total, byStatus, byType, byPriority, overdue, resolutionRate, avgCloseDays }`
+- Incidencias recientes: `GET /api/incidents` (primeras 5)
+- Banner de alerta si hay incidencias con status OPEN
 
 ## Navegación del sidebar
 

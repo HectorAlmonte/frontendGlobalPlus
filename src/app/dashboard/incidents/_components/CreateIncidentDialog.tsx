@@ -61,7 +61,7 @@ const initialState: CreateIncidentInput = {
   detail: "",
   areaId: "",
   observedKind: "NONE",
-  observedUserId: "",
+  observedEmployeeId: "",
   observedAreaId: "",
   observedOtherDetail: "",
   occurredAt: "",
@@ -194,12 +194,12 @@ export default function CreateIncidentDialog({
     if (!canSubmit || !allowed) return;
 
     const kind = form.observedKind;
-    const hasWorker = kind === "USER" && Boolean(form.observedUserId?.trim());
+    const hasWorker = kind === "USER" && Boolean(form.observedEmployeeId?.trim());
 
     const payload: CreateIncidentInput = {
       ...form,
       observedKind: kind === "OTRO" ? "OTRO" : hasWorker ? "USER" : "NONE",
-      observedUserId: hasWorker ? form.observedUserId : "",
+      observedEmployeeId: hasWorker ? form.observedEmployeeId : "",
       observedAreaId: "",
       observedOtherDetail: kind === "OTRO" ? form.observedOtherDetail : "",
       occurredAt: form.occurredAt || undefined,
@@ -221,14 +221,14 @@ export default function CreateIncidentDialog({
   function clearObservedWorker() {
     setForm((p) => ({
       ...p,
-      observedUserId: "",
+      observedEmployeeId: "",
       observedKind: "NONE",
       observedAreaId: "",
     }));
   }
 
   const hasObservedWorker = Boolean(
-    form.observedUserId && form.observedUserId.trim()
+    form.observedEmployeeId && form.observedEmployeeId.trim()
   );
 
   return (
@@ -365,7 +365,7 @@ export default function CreateIncidentDialog({
                     setForm((p) => ({
                       ...p,
                       observedKind: v as "NONE" | "USER" | "OTRO",
-                      observedUserId: v !== "USER" ? "" : p.observedUserId,
+                      observedEmployeeId: v !== "USER" ? "" : p.observedEmployeeId,
                       observedOtherDetail: v !== "OTRO" ? "" : p.observedOtherDetail,
                     }))
                   }
@@ -402,8 +402,8 @@ export default function CreateIncidentDialog({
                     )}
                   </div>
                   <SearchSelect
-                    value={form.observedUserId}
-                    onChange={(id) => setForm((p) => ({ ...p, observedUserId: id }))}
+                    value={form.observedEmployeeId}
+                    onChange={(id) => setForm((p) => ({ ...p, observedEmployeeId: id }))}
                     placeholder="Selecciona trabajador..."
                     searchPlaceholder="Buscar por DNI o nombre..."
                     emptyText="No se encontraron trabajadores"

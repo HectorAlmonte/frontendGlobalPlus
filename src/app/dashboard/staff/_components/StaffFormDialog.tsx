@@ -60,6 +60,7 @@ export default function StaffFormDialog({
 
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
+  const [rolesError, setRolesError] = useState<string | null>(null);
   const [rolesOpen, setRolesOpen] = useState(false);
 
   const [saving, setSaving] = useState(false);
@@ -83,11 +84,14 @@ export default function StaffFormDialog({
     if (!open) return;
     let cancelled = false;
     setLoadingRoles(true);
+    setRolesError(null);
     apiListRolesForSelect()
       .then((data) => {
         if (!cancelled) setRoles(data);
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        if (!cancelled) setRolesError(e?.message || "Error cargando roles");
+      })
       .finally(() => {
         if (!cancelled) setLoadingRoles(false);
       });
@@ -278,6 +282,8 @@ export default function StaffFormDialog({
             <p className="text-sm font-medium">Roles *</p>
             {loadingRoles ? (
               <p className="text-xs text-muted-foreground">Cargando roles...</p>
+            ) : rolesError ? (
+              <p className="text-xs text-destructive">{rolesError}</p>
             ) : roles.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 No se encontraron roles disponibles.

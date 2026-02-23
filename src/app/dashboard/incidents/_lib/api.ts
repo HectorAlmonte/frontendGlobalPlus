@@ -69,9 +69,9 @@ export async function apiCreateIncident(input: CreateIncidentInput) {
     areaId: input.areaId.trim() ? input.areaId.trim() : null,
 
     observedKind: input.observedKind,
-    observedUserId:
-      input.observedKind === "USER" && input.observedUserId.trim()
-        ? input.observedUserId.trim()
+    observedEmployeeId:
+      input.observedKind === "USER" && input.observedEmployeeId.trim()
+        ? input.observedEmployeeId.trim()
         : null,
     observedAreaId:
       input.observedKind === "AREA" && input.observedAreaId.trim()

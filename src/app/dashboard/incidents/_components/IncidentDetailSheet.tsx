@@ -144,8 +144,8 @@ export default function IncidentDetailSheet({
   const canCloseIncident =
     !!detail &&
     !loadingUser &&
-    isSupervisor &&
-    (detail as any).status === "IN_PROGRESS" && // ✅ antes: CORRECTIVE_SET
+    (hasRole(user, "ADMIN") || hasRole(user, "SEGURIDAD")) &&
+    (detail as any).status === "IN_PROGRESS" &&
     !detailLoading &&
     !closing;
 
@@ -169,11 +169,11 @@ export default function IncidentDetailSheet({
     const snap = (detail as any).observedLabelSnapshot ?? null;
 
     if ((detail as any).observedKind === "USER") {
-      const u = (detail as any).observedUser;
+      const u = (detail as any).observedEmployee;
       if (!u) return snap ?? "—";
-      const full = pickFullName(u);
-      const dni = u?.username;
-      if (dni && full !== dni) return `${full} (DNI ${dni})`;
+      const full = `${u.nombres ?? ""} ${u.apellidos ?? ""}`.trim();
+      const dni = u?.dni;
+      if (full && dni) return `${full} (DNI ${dni})`;
       return full || snap || "—";
     }
 

@@ -436,11 +436,11 @@ function buildPrintPayload(detail: IncidentDetail, selectedId?: string | null) {
     const snap = d.observedLabelSnapshot ?? null;
 
     if (d.observedKind === "USER") {
-      const u = d.observedUser;
+      const u = d.observedEmployee;
       if (!u) return snap ?? "—";
-      const full = pickFullName(u);
-      const dni = u?.username;
-      if (dni && full !== dni) return `${full} (DNI ${dni})`;
+      const full = `${u.nombres ?? ""} ${u.apellidos ?? ""}`.trim();
+      const dni = u?.dni;
+      if (full && dni) return `${full} (DNI ${dni})`;
       return full || snap || "—";
     }
     if (d.observedKind === "AREA") {

@@ -16,8 +16,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import type { SubtaskWithIncident, IncidentStatus } from "../_lib/types";
-import { apiListAllSubtasks } from "../_lib/api";
+import { apiListAllSubtasks, apiUpdateSubtask } from "../_lib/api";
 import { statusBadge, priorityBadge } from "../_lib/utils";
+import { toast } from "sonner";
 
 /* -- helpers -- */
 const formatFolio = (num?: number) => {
@@ -65,6 +66,34 @@ export default function SubtasksReportView({ onOpenIncident }: Props) {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
+
+  async function handleToggle(st: SubtaskWithIncident) {
+    if (st.incident?.status === "CLOSED") return;
+    const newVal = !st.isCompleted;
+
+    // Optimistic update
+    setAllSubtasks((prev) =>
+      prev.map((s) =>
+        s.id === st.id
+          ? { ...s, isCompleted: newVal, completedAt: newVal ? new Date().toISOString() : null }
+          : s
+      )
+    );
+
+    try {
+      await apiUpdateSubtask(st.incident.id, st.id, { isCompleted: newVal });
+    } catch (e: any) {
+      // Rollback
+      setAllSubtasks((prev) =>
+        prev.map((s) =>
+          s.id === st.id
+            ? { ...s, isCompleted: st.isCompleted, completedAt: st.completedAt }
+            : s
+        )
+      );
+      toast.error(e?.message || "Error al actualizar objetivo");
+    }
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -270,7 +299,8 @@ export default function SubtasksReportView({ onOpenIncident }: Props) {
                   >
                     <Checkbox
                       checked={st.isCompleted}
-                      disabled
+                      onCheckedChange={() => handleToggle(st)}
+                      disabled={st.incident?.status === "CLOSED"}
                       className="mt-0.5"
                     />
                     <div className="flex-1 min-w-0 space-y-0.5">

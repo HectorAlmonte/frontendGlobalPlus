@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -90,6 +90,18 @@ export default function IncidentsPage() {
     dateFrom?: Date;
     dateTo?: Date;
   }>({ q: "", status: "ALL" });
+
+  // Leer filtro de status desde URL (?status=OPEN|IN_PROGRESS|CLOSED) al montar
+  const didReadUrlFilter = useRef(false);
+  useEffect(() => {
+    if (didReadUrlFilter.current) return;
+    didReadUrlFilter.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("status");
+    if (s === "OPEN" || s === "IN_PROGRESS" || s === "CLOSED") {
+      setTableFilters((prev) => ({ ...prev, status: s }));
+    }
+  }, []);
 
   // Analytics toggle
   const [showAnalytics, setShowAnalytics] = useState(false);

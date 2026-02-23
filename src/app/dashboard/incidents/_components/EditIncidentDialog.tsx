@@ -35,7 +35,7 @@ type FormState = {
   locationLabel: string;
   areaId: string;
   observedKind: ObservedKind;
-  observedUserId: string;
+  observedEmployeeId: string;
   observedOtherDetail: string;
   occurredAt: string;
   causes: string;
@@ -68,7 +68,7 @@ export default function EditIncidentDialog({
     locationLabel: "",
     areaId: "",
     observedKind: "NONE",
-    observedUserId: "",
+    observedEmployeeId: "",
     observedOtherDetail: "",
     occurredAt: "",
     causes: "",
@@ -94,7 +94,7 @@ export default function EditIncidentDialog({
         locationLabel: (detail as any).locationLabel ?? "",
         areaId: detail.area?.id ?? "",
         observedKind: detail.observedKind ?? "NONE",
-        observedUserId: detail.observedUser?.id ?? "",
+        observedEmployeeId: detail.observedEmployee?.id ?? "",
         observedOtherDetail: (detail as any).observedOtherDetail ?? "",
         occurredAt: occurredAtLocal,
         causes: normalizeCausesToString((detail as any).causes),
@@ -124,7 +124,7 @@ export default function EditIncidentDialog({
           : null;
 
       const kind = form.observedKind;
-      const hasWorker = kind === "USER" && Boolean(form.observedUserId?.trim());
+      const hasWorker = kind === "USER" && Boolean(form.observedEmployeeId?.trim());
 
       const body: Record<string, unknown> = {
         title: form.title.trim() || null,
@@ -134,7 +134,7 @@ export default function EditIncidentDialog({
         areaId: form.areaId.trim() || null,
         causes: causesArr,
         observedKind: kind === "OTRO" ? "OTRO" : hasWorker ? "USER" : "NONE",
-        observedUserId: hasWorker ? form.observedUserId : null,
+        observedEmployeeId: hasWorker ? form.observedEmployeeId : null,
         observedOtherDetail: kind === "OTRO" ? (form.observedOtherDetail.trim() || null) : null,
         occurredAt: form.occurredAt || null,
       };
@@ -149,10 +149,10 @@ export default function EditIncidentDialog({
     }
   }
 
-  const hasObservedWorker = Boolean(form.observedUserId?.trim());
+  const hasObservedWorker = Boolean(form.observedEmployeeId?.trim());
 
   function clearObservedWorker() {
-    setForm((p) => ({ ...p, observedUserId: "", observedKind: "NONE" }));
+    setForm((p) => ({ ...p, observedEmployeeId: "", observedKind: "NONE" }));
   }
 
   return (
@@ -240,7 +240,7 @@ export default function EditIncidentDialog({
                     setForm((p) => ({
                       ...p,
                       observedKind: v as ObservedKind,
-                      observedUserId: v !== "USER" ? "" : p.observedUserId,
+                      observedEmployeeId: v !== "USER" ? "" : p.observedEmployeeId,
                       observedOtherDetail: v !== "OTRO" ? "" : p.observedOtherDetail,
                     }))
                   }
@@ -277,8 +277,8 @@ export default function EditIncidentDialog({
                     )}
                   </div>
                   <SearchSelect
-                    value={form.observedUserId}
-                    onChange={(id) => setForm((p) => ({ ...p, observedUserId: id }))}
+                    value={form.observedEmployeeId}
+                    onChange={(id) => setForm((p) => ({ ...p, observedEmployeeId: id }))}
                     placeholder="Selecciona trabajador..."
                     searchPlaceholder="Buscar por DNI o nombre..."
                     emptyText="No se encontraron trabajadores"

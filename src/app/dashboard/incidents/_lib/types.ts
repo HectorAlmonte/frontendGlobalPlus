@@ -140,9 +140,11 @@ export type IncidentDetail = IncidentListItem & {
   observedKind?: ObservedKind;
   observedOtherDetail?: string | null;
 
-  observedUser?: {
+  observedEmployee?: {
     id: string;
-    username: string;
+    nombres: string;
+    apellidos: string;
+    dni: string;
   } | null;
 
   observedArea?: {
@@ -227,7 +229,7 @@ export type CreateIncidentInput = {
   areaId: string;
 
   observedKind: ObservedKind;
-  observedUserId: string;
+  observedEmployeeId: string;
   observedAreaId: string;
   observedOtherDetail?: string;
 

@@ -69,6 +69,7 @@ type MeProfile = {
     email?: string | null;
     fullName?: string | null;
     role?: { key: RoleKey; name?: string | null } | null;
+    roles?: { key: RoleKey; name?: string | null }[];
   };
   employee?: {
     id?: string;
@@ -238,7 +239,19 @@ export default function MyProfilePage() {
     };
   }, []);
 
-  const roleKey: RoleKey | undefined = data?.user?.role?.key;
+  // Soporta multi-rol: usa roles[] si está disponible, si no cae a role (singular)
+  const userRoles: { key: RoleKey; name?: string | null }[] =
+    data?.user?.roles?.length
+      ? data.user.roles
+      : data?.user?.role
+      ? [data.user.role]
+      : [];
+
+  // Para CreateIncidentDialog, usa el rol de mayor privilegio como roleKey efectivo
+  const ROLE_PRIORITY: RoleKey[] = ["ADMIN", "SUPERVISOR", "SEGURIDAD", "TRABAJADOR"];
+  const roleKey: RoleKey | undefined =
+    ROLE_PRIORITY.find((k) => userRoles.some((r) => r.key === k)) ?? userRoles[0]?.key;
+
 
   async function handleCreate(input: CreateIncidentInput) {
     setCreating(true);
@@ -346,7 +359,7 @@ export default function MyProfilePage() {
     );
   }
 
-  const roleLabel = data.user.role?.name || data.user.role?.key || "—";
+  const roleLabel = userRoles.map((r) => r.name || r.key).join(", ") || "—";
   const emailLabel = data.user.email || data.employee?.email || null;
 
   return (
@@ -386,7 +399,9 @@ export default function MyProfilePage() {
 
                   <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-1.5">
                     <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{roleLabel}</span>
+                    <span className="text-sm font-medium">
+                      {userRoles.map((r) => r.name || r.key).join(" · ") || "—"}
+                    </span>
                   </div>
 
                   {data.employee?.status && (
@@ -674,10 +689,16 @@ export default function MyProfilePage() {
                       <p className="text-xs font-medium uppercase text-muted-foreground">
                         Rol del sistema
                       </p>
-                      <Badge variant="outline" className="mt-1 gap-1">
-                        <ShieldCheck className="h-3 w-3" />
-                        {roleLabel}
-                      </Badge>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {userRoles.length > 0 ? userRoles.map((r) => (
+                          <Badge key={r.key} variant="outline" className="gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            {r.name || r.key}
+                          </Badge>
+                        )) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </div>
                     </div>
 
                     <Separator />

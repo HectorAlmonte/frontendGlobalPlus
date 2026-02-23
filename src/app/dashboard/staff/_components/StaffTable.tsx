@@ -29,7 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Copy, Check } from "lucide-react";
 
 import type { StaffRow } from "../_lib/types";
 import {
@@ -64,7 +64,9 @@ export default function StaffTable({
   const [resetResult, setResetResult] = useState<{
     email: string;
     username: string;
+    tempPassword?: string;
   } | null>(null);
+  const [copied, setCopied] = useState<"username" | "password" | null>(null);
 
   /* ── Paginación ── */
   const [pageIndex, setPageIndex] = useState(0);
@@ -131,7 +133,7 @@ export default function StaffTable({
         await load();
       } else if (confirmAction === "reset") {
         const res = await apiResetPassword(selected.id);
-        setResetResult({ email: res.email, username: res.username });
+        setResetResult({ email: res.email, username: res.username, tempPassword: res.tempPassword });
       }
     } catch (e: any) {
       console.error(e);
@@ -139,6 +141,13 @@ export default function StaffTable({
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const copyToClipboard = (text: string, field: "username" | "password") => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(field);
+      setTimeout(() => setCopied(null), 2000);
+    });
   };
 
   const confirmTitle = {
@@ -396,21 +405,58 @@ export default function StaffTable({
           </DialogHeader>
 
           {resetResult && (
-            <div className="rounded-md border bg-muted/50 p-3 space-y-1">
-              <p className="text-sm font-medium">
-                Contraseña temporal enviada por correo
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Contraseña reseteada correctamente. Comparte estas credenciales con el trabajador.
               </p>
-              <p className="text-sm">
-                <span className="text-muted-foreground">Usuario:</span>{" "}
-                <span className="font-mono font-medium">{resetResult.username}</span>
-              </p>
-              <p className="text-sm">
-                <span className="text-muted-foreground">Correo:</span>{" "}
-                <span className="font-medium">{resetResult.email}</span>
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                El trabajador recibirá sus credenciales temporales en su correo electrónico.
-              </p>
+
+              {/* Usuario */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Usuario</p>
+                <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                  <span className="flex-1 font-mono text-sm font-medium">{resetResult.username}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                    onClick={() => copyToClipboard(resetResult.username, "username")}
+                  >
+                    {copied === "username"
+                      ? <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      : <Copy className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Contraseña temporal */}
+              {resetResult.tempPassword && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contraseña temporal</p>
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                    <span className="flex-1 font-mono text-sm font-medium tracking-widest">{resetResult.tempPassword}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 shrink-0"
+                      onClick={() => copyToClipboard(resetResult.tempPassword!, "password")}
+                    >
+                      {copied === "password"
+                        ? <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Correo */}
+              <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-950/30">
+                <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  Credenciales enviadas al correo <span className="font-medium">{resetResult.email}</span>
+                </p>
+              </div>
             </div>
           )}
 

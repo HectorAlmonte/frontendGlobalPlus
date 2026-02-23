@@ -85,13 +85,14 @@ export function apiDeactivateStaff(id: string) {
   );
 }
 
-/* ── Reset password (envía por email, no devuelve la contraseña) ── */
+/* ── Reset password ── */
 export function apiResetPassword(id: string) {
   return apiFetch<{
     ok: boolean;
     message: string;
     username: string;
     email: string;
+    tempPassword?: string;
   }>(full(`/api/staff/${id}/reset-password`), { method: "POST" });
 }
 
