@@ -15,7 +15,8 @@
       "Bash(del \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\\\\src\\\\middleware.ts\")",
       "Bash(git add:*)",
       "Bash(git rm:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cd \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\" && npx shadcn@latest add radio-group progress --yes 2>&1)"
     ]
   }
 }
