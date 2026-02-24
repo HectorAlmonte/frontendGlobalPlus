@@ -192,3 +192,65 @@ La UI está en **español**. Labels, placeholders, mensajes de error, todo en es
 - No usar `"use server"` - toda la comunicación es via fetch al backend externo
 - Imports de UI siempre desde `@/components/ui/`
 - Imports entre módulos: preferir rutas relativas dentro del módulo (`../_lib/api`)
+
+## Patrón visual preferido (diseño UX)
+
+### Card con sección — bloque base de UI
+
+Usar este patrón para **cualquier sección de contenido** (formularios, detalles, listas):
+
+```tsx
+<div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+  {/* Header de sección */}
+  <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+    {/* Badge numerado (en formularios de pasos) */}
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+      1
+    </span>
+    <div>
+      <p className="text-sm font-semibold leading-none">Título de sección</p>
+      <p className="text-xs text-muted-foreground mt-0.5">Descripción breve</p>
+    </div>
+    {/* Opcional: badge de estado o contador a la derecha */}
+    <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+      Info
+    </span>
+  </div>
+  {/* Cuerpo */}
+  <div className="p-5 space-y-4">
+    {/* contenido */}
+  </div>
+</div>
+```
+
+### Cuándo usar badges numerados
+
+En formularios de creación con múltiples secciones, numerar cada paso (①②③) para guiar al usuario.
+
+### Formularios de creación
+
+- Contenedor: `max-w-3xl mx-auto space-y-4 pb-10`
+- Cada sección en su propia card con header
+- Botón submit **dentro** del último paso, alineado a la derecha
+- Labels con `space-y-1.5` entre label e input (no `space-y-1`)
+- Inputs: `h-10` en móvil (área táctil), en desktop también `h-10` para consistencia
+
+### Vistas de detalle / recibo
+
+- Mismo patrón de cards por sección (datos, ítems, firma, etc.)
+- Contenedor: `max-w-3xl mx-auto` con padding `px-4 py-5 sm:px-6 sm:py-6`
+- Sheet para paneles de detalle: `!w-full !max-w-full` (full-screen, no panel lateral estrecho)
+
+### Tablas
+
+- Envolver en card: `rounded-xl border bg-card shadow-sm overflow-hidden`
+- Filtros dentro del header de la card (`border-b bg-muted/30 px-5 py-4`)
+- La tabla ocupa el cuerpo sin padding adicional
+- Paginación fuera de la card, debajo
+
+### Diseño responsive
+
+- Mobile-first: inputs y botones `h-10` (44px área táctil mínima)
+- `flex-col sm:flex-row` para barras de filtros
+- Columnas de tabla: ocultar las menos importantes en móvil con `hidden sm:table-cell`, `hidden md:table-cell`
+- Stats cards: `grid-cols-3` siempre (no colapsar a 1 columna en móvil)

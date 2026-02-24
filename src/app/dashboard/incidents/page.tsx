@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, ListChecks } from "lucide-react";
+import { BarChart3, ListChecks, ShieldAlert } from "lucide-react";
 
 import IncidentsTable from "./_components/IncidentsTable";
 import IncidentDetailSheet from "./_components/IncidentDetailSheet";
@@ -302,24 +301,30 @@ export default function IncidentsPage() {
   }, [reloadDetail, fetchList]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7 space-y-6">
+    <div className="mx-auto w-full max-w-7xl px-4 py-5 space-y-6">
       {/* ===== HEADER ===== */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Incidencias</h1>
-          <p className="text-sm text-muted-foreground">
-            Historial, seguimiento, correctivos y levantamientos.
-          </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+            <ShieldAlert className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">Incidencias</h1>
+            <p className="text-sm text-muted-foreground">
+              Historial, seguimiento, correctivos y levantamientos
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setShowAnalytics((v) => !v)}
             className="gap-2"
           >
             <BarChart3 className="h-4 w-4" />
-            {showAnalytics ? "Ocultar analytics" : "Analytics"}
+            <span className="hidden sm:inline">{showAnalytics ? "Ocultar analytics" : "Analytics"}</span>
           </Button>
 
           <CreateIncidentDialog
@@ -375,58 +380,26 @@ export default function IncidentsPage() {
         </TabsList>
 
         <TabsContent value="listado">
-          <div className="rounded-xl border bg-card shadow-sm">
-            <div className="flex items-center justify-between px-5 py-4">
-              <div className="space-y-0.5">
-                <h2 className="text-sm font-semibold">Listado de incidencias</h2>
-                <p className="text-xs text-muted-foreground">
-                  {tableFilters.dateFrom || tableFilters.dateTo
-                    ? "Mostrando incidencias en el rango seleccionado."
-                    : "Mostrando todas las incidencias."}
-                </p>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="p-4">
-              <IncidentsTable
-                loading={loading}
-                items={filtered}
-                filters={tableFilters}
-                onFiltersChange={setTableFilters}
-                onOpen={(id) => {
-                  setSelectedId(id);
-                  setOpenSheet(true);
-                }}
-                onRefresh={fetchList}
-              />
-            </div>
-          </div>
+          <IncidentsTable
+            loading={loading}
+            items={filtered}
+            filters={tableFilters}
+            onFiltersChange={setTableFilters}
+            onOpen={(id) => {
+              setSelectedId(id);
+              setOpenSheet(true);
+            }}
+            onRefresh={fetchList}
+          />
         </TabsContent>
 
         <TabsContent value="objetivos">
-          <div className="rounded-xl border bg-card shadow-sm">
-            <div className="flex items-center justify-between px-5 py-4">
-              <div className="space-y-0.5">
-                <h2 className="text-sm font-semibold">Reporte de objetivos</h2>
-                <p className="text-xs text-muted-foreground">
-                  Objetivos de todas las incidencias agrupados por incidencia.
-                </p>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="p-4">
-              <SubtasksReportView
-                onOpenIncident={(id) => {
-                  setSelectedId(id);
-                  setOpenSheet(true);
-                }}
-              />
-            </div>
-          </div>
+          <SubtasksReportView
+            onOpenIncident={(id) => {
+              setSelectedId(id);
+              setOpenSheet(true);
+            }}
+          />
         </TabsContent>
       </Tabs>
 

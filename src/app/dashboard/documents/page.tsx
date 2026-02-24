@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { BookOpen, Plus } from "lucide-react";
 
 import DocumentsTable from "./_components/DocumentsTable";
 import DocumentDetailSheet from "./_components/DocumentDetailSheet";
@@ -167,53 +167,40 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7 space-y-6">
+    <div className="mx-auto w-full max-w-7xl px-4 py-5 space-y-6">
       {/* ===== HEADER ===== */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Control Documental
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gestión de documentos, versiones y vigencias.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isAdmin && (
-            <Button onClick={() => setOpenCreate(true)}>
-              Nuevo Documento
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* ===== TABLA ===== */}
-      <div className="rounded-xl border bg-card shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="space-y-0.5">
-            <h2 className="text-sm font-semibold">Listado de documentos</h2>
-            <p className="text-xs text-muted-foreground">
-              Mostrando todos los documentos registrados.
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">Control Documental</h1>
+            <p className="text-sm text-muted-foreground">
+              Gestión de documentos, versiones y vigencias
             </p>
           </div>
         </div>
 
-        <Separator />
-
-        <div className="p-4">
-          <DocumentsTable
-            loading={loading}
-            items={items}
-            documentTypes={documentTypes}
-            onOpen={(id) => {
-              setSelectedId(id);
-              setOpenSheet(true);
-            }}
-            onRefresh={fetchList}
-          />
-        </div>
+        {isAdmin && (
+          <Button size="sm" onClick={() => setOpenCreate(true)} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nuevo documento</span>
+          </Button>
+        )}
       </div>
+
+      {/* ===== TABLA ===== */}
+      <DocumentsTable
+        loading={loading}
+        items={items}
+        documentTypes={documentTypes}
+        onOpen={(id) => {
+          setSelectedId(id);
+          setOpenSheet(true);
+        }}
+        onRefresh={fetchList}
+      />
 
       {/* ===== PANEL DETALLE ===== */}
       <DocumentDetailSheet

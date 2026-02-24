@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { ListChecks, Search, RefreshCw } from "lucide-react";
 
 import type { SubtaskWithIncident, IncidentStatus } from "../_lib/types";
 import { apiListAllSubtasks, apiUpdateSubtask } from "../_lib/api";
@@ -172,24 +172,40 @@ export default function SubtasksReportView({ onOpenIncident }: Props) {
   const pendingSubtasks = totalSubtasks - completedSubtasks;
 
   return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2 flex-1">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar objetivo o incidencia..."
-            className="w-full sm:w-[280px]"
-          />
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+
+      {/* ── Card header: título + filtros ── */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 sm:items-center px-5 py-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3 sm:flex-1 min-w-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <ListChecks className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-none">Reporte de objetivos</p>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+              <span>{totalSubtasks} objetivo{totalSubtasks !== 1 ? "s" : ""}</span>
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 text-[10px] px-1.5 py-0">
+                {pendingSubtasks} pendiente{pendingSubtasks !== 1 ? "s" : ""}
+              </Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px] px-1.5 py-0">
+                {completedSubtasks} completado{completedSubtasks !== 1 ? "s" : ""}
+              </Badge>
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-          >
-            <SelectTrigger className="w-[140px] h-8">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:shrink-0">
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar objetivo o incidencia..."
+              className="pl-8 h-9 w-full"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+            <SelectTrigger className="w-full sm:w-40 h-9">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -198,40 +214,26 @@ export default function SubtasksReportView({ onOpenIncident }: Props) {
               <SelectItem value="completed">Completados</SelectItem>
             </SelectContent>
           </Select>
-
-          <Button size="sm" variant="outline" onClick={fetchData} disabled={loading}>
-            ↻
+          <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={fetchData} disabled={loading} title="Recargar">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
 
-      {/* Summary badges */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span>{totalSubtasks} objetivo{totalSubtasks !== 1 ? "s" : ""}</span>
-        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-          {pendingSubtasks} pendiente{pendingSubtasks !== 1 ? "s" : ""}
-        </Badge>
-        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-          {completedSubtasks} completado{completedSubtasks !== 1 ? "s" : ""}
-        </Badge>
-      </div>
+      {/* ── Contenido ── */}
+      <div className="p-5 space-y-4">
+        {loading && (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Cargando objetivos...
+          </p>
+        )}
 
-      <Separator />
+        {!loading && grouped.length === 0 && (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            No hay objetivos para mostrar.
+          </p>
+        )}
 
-      {/* Content */}
-      {loading && (
-        <p className="text-sm text-muted-foreground py-8 text-center">
-          Cargando objetivos...
-        </p>
-      )}
-
-      {!loading && grouped.length === 0 && (
-        <p className="text-sm text-muted-foreground py-8 text-center">
-          No hay objetivos para mostrar.
-        </p>
-      )}
-
-      <div className="space-y-4">
         {grouped.map((group) => {
           const pct = group.total > 0 ? Math.round((group.completed / group.total) * 100) : 0;
           const allDone = group.total > 0 && group.completed === group.total;

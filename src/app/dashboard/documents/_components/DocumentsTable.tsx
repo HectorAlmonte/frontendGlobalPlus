@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileText, Search, RefreshCw } from "lucide-react";
 
 import type { DocumentRow, DocumentType } from "../_lib/types";
 import { statusBadge, formatDate, moduleKeyLabel } from "../_lib/utils";
@@ -78,47 +78,50 @@ export default function DocumentsTable({
     [filtered, pageIndex, pageSize]
   );
 
-  // Reset page when filters change
   useEffect(() => { setPageIndex(0); }, [filtered.length, pageSize]);
 
   return (
-    <div className="space-y-3">
-      {/* -- Filtros -- */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nombre, código, área..."
-            className="w-full sm:w-[260px]"
-          />
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+
+      {/* ── Card header: título + filtros ── */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 sm:items-center px-5 py-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3 sm:flex-1 min-w-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <FileText className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-none">Listado de documentos</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={typeFilter}
-            onValueChange={setTypeFilter}
-          >
-            <SelectTrigger className="w-full sm:w-[160px] h-8">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:shrink-0">
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar nombre, código, área..."
+              className="pl-8 h-9 w-full"
+            />
+          </div>
+
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full sm:w-40 h-9">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Todos los tipos</SelectItem>
               {documentTypes.map((dt) => (
-                <SelectItem key={dt.id} value={dt.id}>
-                  {dt.name}
-                </SelectItem>
+                <SelectItem key={dt.id} value={dt.id}>{dt.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select
-            value={statusFilter}
-            onValueChange={(v) =>
-              setStatusFilter(v as "ALL" | "VIGENTE" | "EXPIRADO")
-            }
-          >
-            <SelectTrigger className="w-full sm:w-[140px] h-8">
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "ALL" | "VIGENTE" | "EXPIRADO")}>
+            <SelectTrigger className="w-full sm:w-36 h-9">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -128,43 +131,32 @@ export default function DocumentsTable({
             </SelectContent>
           </Select>
 
-          <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
-            ↻
+          <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={onRefresh} disabled={loading} title="Recargar">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>
-          {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      <Separator />
-
-      {/* -- Tabla -- */}
-      <div className="overflow-auto rounded-md border">
+      {/* ── Tabla ── */}
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted/40">
-            <tr className="text-left">
-              <th className="px-3 py-2">Código</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Área de trabajo</th>
-              <th className="px-3 py-2">Versión</th>
-              <th className="px-3 py-2">Vigencia</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2 text-right">Acciones</th>
+          <thead className="bg-muted/30">
+            <tr className="text-left border-b">
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide">Código</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide">Nombre</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Tipo</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide hidden md:table-cell">Área</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Versión</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Vigencia</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide">Estado</th>
+              <th className="px-4 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wide text-right">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
             {paginatedRows.length === 0 && (
               <tr>
-                <td
-                  className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={8}
-                >
+                <td className="px-4 py-12 text-center text-muted-foreground" colSpan={8}>
                   {loading ? "Cargando..." : "No hay documentos para mostrar."}
                 </td>
               </tr>
@@ -175,64 +167,52 @@ export default function DocumentsTable({
               return (
                 <tr
                   key={doc.id}
-                  className={`border-t hover:bg-muted/30 ${
-                    isExpired ? "bg-red-50/60" : ""
-                  }`}
+                  className={`border-t hover:bg-muted/40 active:bg-muted cursor-pointer transition-colors ${isExpired ? "bg-red-50/50 dark:bg-red-900/10" : ""}`}
+                  onClick={() => onOpen(doc.id)}
                 >
-                  <td className="px-3 py-2 font-mono font-medium text-primary whitespace-nowrap">
+                  <td className="px-4 py-3 font-mono font-semibold text-primary text-xs whitespace-nowrap">
                     {doc.code || <span className="text-muted-foreground italic font-sans font-normal">Sin código</span>}
                   </td>
 
-                  <td className="px-3 py-2">
-                    <button
-                      className="font-medium text-left hover:underline"
-                      onClick={() => onOpen(doc.id)}
-                    >
-                      {doc.name}
-                    </button>
+                  <td className="px-4 py-3">
+                    <p className="font-medium leading-tight line-clamp-1">{doc.name}</p>
                     {doc.moduleKey && (
-                      <div className="text-xs text-muted-foreground">
-                        {moduleKeyLabel(doc.moduleKey)}
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{moduleKeyLabel(doc.moduleKey)}</p>
                     )}
+                    {/* Tipo visible en móvil */}
+                    <div className="mt-0.5 sm:hidden">
+                      <Badge variant="outline" className="text-xs">{doc.documentType?.name ?? "—"}</Badge>
+                    </div>
                   </td>
 
-                  <td className="px-3 py-2">
-                    <Badge variant="outline">
-                      {doc.documentType?.name ?? "\u2014"}
-                    </Badge>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <Badge variant="outline" className="text-xs">{doc.documentType?.name ?? "—"}</Badge>
                   </td>
 
-                  <td className="px-3 py-2 text-xs">
-                    {doc.workArea
-                      ? `${doc.workArea.name} (${doc.workArea.code})`
-                      : "\u2014"}
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                    {doc.workArea ? `${doc.workArea.name} (${doc.workArea.code})` : "—"}
                   </td>
 
-                  <td className="px-3 py-2 text-xs font-medium">
+                  <td className="px-4 py-3 text-xs font-medium hidden sm:table-cell">
                     {doc.currentVersion
                       ? `v${doc.currentVersion.versionNumber}`
                       : <span className="text-muted-foreground italic">Sin versión</span>}
                   </td>
 
-                  <td className="px-3 py-2 text-xs">
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell whitespace-nowrap">
                     {doc.currentVersion
-                      ? `${formatDate(doc.currentVersion.validFrom)} - ${formatDate(doc.currentVersion.validUntil)}`
-                      : <span className="text-muted-foreground italic">Pendiente</span>}
+                      ? `${formatDate(doc.currentVersion.validFrom)} – ${formatDate(doc.currentVersion.validUntil)}`
+                      : <span className="italic">Pendiente</span>}
                   </td>
 
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     {doc.currentVersion
                       ? statusBadge(isExpired, doc.isActive)
-                      : <Badge variant="outline">Sin archivo</Badge>}
+                      : <Badge variant="outline" className="text-xs">Sin archivo</Badge>}
                   </td>
 
-                  <td className="px-3 py-2 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onOpen(doc.id)}
-                    >
+                  <td className="px-4 py-3 text-right">
+                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => { e.stopPropagation(); onOpen(doc.id); }}>
                       Ver
                     </Button>
                   </td>
@@ -243,65 +223,30 @@ export default function DocumentsTable({
         </table>
       </div>
 
-      {/* -- Paginacion -- */}
-      <div className="flex items-center justify-between pt-2">
+      {/* ── Paginación (footer) ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3 border-t text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
-          <Label htmlFor="docs-page-size" className="text-sm font-medium">
-            Filas por pagina
-          </Label>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => setPageSize(Number(v))}
-          >
-            <SelectTrigger className="w-16 sm:w-20 h-8" id="docs-page-size">
+          <Label htmlFor="docs-page-size" className="text-xs">Filas por página</Label>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="w-16 h-8 text-xs" id="docs-page-size">
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
               {[5, 10, 20, 30, 50].map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
+                <SelectItem key={size} value={String(size)} className="text-xs">{size}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Pagina {pageIndex + 1} de {pageCount}
+        <div className="flex items-center justify-center gap-1">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setPageIndex(0)} disabled={pageIndex === 0}>«</Button>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0}>‹</Button>
+          <span className="px-3 py-1 rounded border text-xs font-medium min-w-[70px] text-center">
+            {pageIndex + 1} / {pageCount}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex(0)}
-            disabled={pageIndex === 0}
-          >
-            «
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-            disabled={pageIndex === 0}
-          >
-            ‹
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex((i) => Math.min(pageCount - 1, i + 1))}
-            disabled={pageIndex >= pageCount - 1}
-          >
-            ›
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex(pageCount - 1)}
-            disabled={pageIndex >= pageCount - 1}
-          >
-            »
-          </Button>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setPageIndex((i) => Math.min(pageCount - 1, i + 1))} disabled={pageIndex >= pageCount - 1}>›</Button>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setPageIndex(pageCount - 1)} disabled={pageIndex >= pageCount - 1}>»</Button>
         </div>
       </div>
     </div>

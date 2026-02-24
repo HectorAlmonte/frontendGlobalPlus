@@ -174,64 +174,46 @@ export default function StorageDashboard({ refreshKey }: Props) {
 
       {/* Alerts table */}
       {(stats.stockAlerts ?? []).length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Alertas de stock</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/dashboard/storage/products?lowStock=1")}
-            >
-              Ver todos <ArrowRight className="ml-1 h-4 w-4" />
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b bg-muted/30">
+            <div className="flex items-center gap-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-500/10">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+              </div>
+              <p className="text-sm font-semibold leading-none">Alertas de stock</p>
+            </div>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => router.push("/dashboard/storage/products?lowStock=1")}>
+              Ver todos <ArrowRight className="h-3.5 w-3.5" />
             </Button>
-          </CardHeader>
-          <CardContent className="p-0">
+          </div>
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Stock actual</TableHead>
-                  <TableHead>Stock mínimo</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Nivel</TableHead>
-                  {canRegister && <TableHead className="text-right">Acción</TableHead>}
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Producto</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Código</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Stock actual</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Mínimo</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden md:table-cell">Unidad</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Nivel</TableHead>
+                  {canRegister && <TableHead className="text-xs text-muted-foreground uppercase tracking-wide text-right">Acción</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(stats.stockAlerts ?? []).map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.name}</TableCell>
-                    <TableCell className="font-mono text-sm">{a.code}</TableCell>
-                    <TableCell
-                      className={
-                        a.currentStock === 0
-                          ? "text-red-600 font-bold"
-                          : "text-orange-600 font-semibold"
-                      }
-                    >
+                  <TableRow key={a.id} className="hover:bg-muted/40 transition-colors">
+                    <TableCell className="font-medium text-sm">{a.name}</TableCell>
+                    <TableCell className="font-mono text-xs hidden sm:table-cell">{a.code}</TableCell>
+                    <TableCell className={a.currentStock === 0 ? "text-red-600 font-bold" : "text-orange-600 font-semibold"}>
                       {a.currentStock}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {a.minStock}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {a.unit ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <StockAlertBadge level={a.level} />
-                    </TableCell>
+                    <TableCell className="text-muted-foreground hidden sm:table-cell">{a.minStock}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">{a.unit ?? "—"}</TableCell>
+                    <TableCell><StockAlertBadge level={a.level} /></TableCell>
                     {canRegister && (
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            setMovDialog({ productId: a.id, productName: a.name })
-                          }
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" />
-                          Ingreso
+                        <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => setMovDialog({ productId: a.id, productName: a.name })}>
+                          <Plus className="h-3.5 w-3.5" />Ingreso
                         </Button>
                       </TableCell>
                     )}
@@ -239,66 +221,56 @@ export default function StorageDashboard({ refreshKey }: Props) {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Recent movements */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Últimos movimientos</CardTitle>
-          <span className="text-xs text-muted-foreground">Últimos 7 días</span>
-        </CardHeader>
-        <CardContent className="p-0">
-          {(stats.recentMovements ?? []).length === 0 ? (
-            <p className="text-center text-muted-foreground py-8 text-sm">
-              Sin movimientos recientes
-            </p>
-          ) : (
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <TrendingDown className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold leading-none">Últimos movimientos</p>
+          </div>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Últimos 7 días</span>
+        </div>
+        {(stats.recentMovements ?? []).length === 0 ? (
+          <p className="text-center text-muted-foreground py-8 text-sm">Sin movimientos recientes</p>
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Retirado por</TableHead>
-                  <TableHead>Registrado por</TableHead>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Fecha</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Producto</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Tipo</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Cant.</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden md:table-cell">Retirado por</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Registrado por</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(stats.recentMovements ?? []).map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="text-sm whitespace-nowrap">
-                      {fmtDateTime(m.createdAt)}
-                    </TableCell>
+                  <TableRow key={m.id} className="hover:bg-muted/40 transition-colors">
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDateTime(m.createdAt)}</TableCell>
                     <TableCell>
-                      <button
-                        className="text-sm font-medium hover:underline text-left"
-                        onClick={() =>
-                          router.push(`/dashboard/storage/products/${m.product.id}`)
-                        }
-                      >
+                      <button className="text-sm font-medium hover:underline text-left" onClick={() => router.push(`/dashboard/storage/products/${m.product.id}`)}>
                         {m.product.name}
                       </button>
                     </TableCell>
-                    <TableCell>
-                      <MovementTypeBadge type={m.type} />
-                    </TableCell>
-                    <TableCell className="font-semibold">{m.quantity}</TableCell>
-                    <TableCell className="text-sm">
-                      {m.requestedBy ? employeeName(m.requestedBy) : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {performedByName(m.performedBy)}
-                    </TableCell>
+                    <TableCell><MovementTypeBadge type={m.type} /></TableCell>
+                    <TableCell className="font-semibold text-sm">{m.quantity}</TableCell>
+                    <TableCell className="text-sm hidden md:table-cell">{m.requestedBy ? employeeName(m.requestedBy) : "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">{performedByName(m.performedBy)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
       {/* Movement dialog triggered from alerts table */}
       {movDialog && (

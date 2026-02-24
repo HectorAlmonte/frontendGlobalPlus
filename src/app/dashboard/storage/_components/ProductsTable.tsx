@@ -40,6 +40,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  BookOpen,
+  Search,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -158,31 +160,45 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-3 items-center justify-between">
-        <div className="flex flex-wrap gap-2 items-center">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar nombre o código..."
-            className="w-52"
-          />
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+
+      {/* ── Card header: título + filtros ── */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 sm:items-center px-5 py-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3 sm:flex-1 min-w-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <BookOpen className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-none">Catálogo de productos</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {items.length} producto{items.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:shrink-0">
+          <div className="relative w-full sm:w-52">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar nombre o código..."
+              className="pl-8 h-9 w-full"
+            />
+          </div>
           <Select value={filterCat} onValueChange={setFilterCat}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-40 h-9">
               <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Todas las categorías</SelectItem>
               {categories.map((c) => (
-                <SelectItem key={c.value} value={c.value}>
-                  {c.label}
-                </SelectItem>
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={filterKind} onValueChange={setFilterKind}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-36 h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -191,81 +207,61 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
               <SelectItem value="EQUIPMENT">Equipos</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="low-stock"
-              checked={onlyLowStock}
-              onCheckedChange={setOnlyLowStock}
-            />
-            <Label htmlFor="low-stock" className="text-sm cursor-pointer">
-              Solo stock bajo
-            </Label>
+          <div className="flex items-center gap-2 shrink-0">
+            <Switch id="low-stock" checked={onlyLowStock} onCheckedChange={setOnlyLowStock} />
+            <Label htmlFor="low-stock" className="text-xs cursor-pointer whitespace-nowrap">Solo stock bajo</Label>
           </div>
+          {canEdit && (
+            <Button size="sm" className="h-9 gap-2 shrink-0" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nuevo producto</span>
+            </Button>
+          )}
         </div>
-        {canEdit && (
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo producto
-          </Button>
-        )}
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* ── Tabla ── */}
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Stock / Unidades</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+            <TableRow className="bg-muted/30">
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Código</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Nombre</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Categoría</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Tipo</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Stock / Unidades</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Estado</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  Cargando...
-                </TableCell>
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Cargando...</TableCell>
               </TableRow>
             ) : paginatedRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  Sin productos
-                </TableCell>
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Sin productos</TableCell>
               </TableRow>
             ) : (
               paginatedRows.map((p) => (
-                <TableRow key={p.id} className="group">
-                  <TableCell className="font-mono text-sm">{p.code}</TableCell>
-                  <TableCell className="font-medium">
-                    {p.name}
+                <TableRow key={p.id} className="group hover:bg-muted/40 transition-colors">
+                  <TableCell className="font-mono text-xs font-semibold text-primary">{p.code}</TableCell>
+                  <TableCell>
+                    <p className="font-medium text-sm">{p.name}</p>
                     {p.kind === "EQUIPMENT" && p.brand && (
-                      <span className="text-xs text-muted-foreground ml-1">
-                        {p.brand} {p.model}
-                      </span>
+                      <p className="text-xs text-muted-foreground">{p.brand} {p.model}</p>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {p.category.name}
-                  </TableCell>
-                  <TableCell>
-                    <KindBadge kind={p.kind} />
-                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">{p.category.name}</TableCell>
+                  <TableCell><KindBadge kind={p.kind} /></TableCell>
                   <TableCell>
                     {p.kind === "CONSUMABLE" ? (
-                      <span
-                        className={
-                          p.currentStock === 0
-                            ? "text-red-600 font-semibold"
-                            : p.minStock && p.currentStock! <= p.minStock
-                            ? "text-orange-600 font-semibold"
-                            : ""
-                        }
-                      >
+                      <span className={
+                        p.currentStock === 0 ? "text-red-600 font-semibold text-sm"
+                          : p.minStock && p.currentStock! <= p.minStock ? "text-orange-600 font-semibold text-sm"
+                          : "text-sm"
+                      }>
                         {p.currentStock ?? 0}{" "}
                         <span className="text-muted-foreground text-xs">{p.unit}</span>
                         {p.minStock != null && p.currentStock! <= p.minStock && (
@@ -276,52 +272,26 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
                       <span className="text-muted-foreground text-sm">Equipos →</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={p.isActive ? "outline" : "secondary"}
-                      className={p.isActive ? "text-green-700 border-green-300" : ""}
-                    >
+                  <TableCell className="hidden sm:table-cell">
+                    <Badge variant={p.isActive ? "outline" : "secondary"} className={p.isActive ? "text-green-700 border-green-300 text-xs" : "text-xs"}>
                       {p.isActive ? "Activo" : "Inactivo"}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title="Ver detalle"
-                        onClick={() =>
-                          router.push(`/dashboard/storage/products/${p.id}`)
-                        }
-                      >
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Ver detalle" onClick={() => router.push(`/dashboard/storage/products/${p.id}`)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       {canEdit && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Editar"
-                          onClick={() => setEditProduct(p)}
-                        >
+                        <Button size="icon" variant="ghost" className="h-8 w-8" title="Editar" onClick={() => setEditProduct(p)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title="Descargar QR"
-                        onClick={() => handleQr(p)}
-                      >
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Descargar QR" onClick={() => handleQr(p)}>
                         <QrCode className="h-4 w-4" />
                       </Button>
                       {canDelete && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Eliminar"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(p)}
-                        >
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" title="Eliminar" onClick={() => setDeleteTarget(p)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -334,29 +304,17 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {items.length} producto{items.length !== 1 ? "s" : ""}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={pageIndex === 0}
-            onClick={() => setPageIndex((p) => p - 1)}
-          >
+      {/* ── Paginación (footer) ── */}
+      <div className="flex items-center justify-between px-5 py-3 border-t text-sm text-muted-foreground">
+        <span className="text-xs">{items.length} producto{items.length !== 1 ? "s" : ""}</span>
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageIndex === 0} onClick={() => setPageIndex((p) => p - 1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span>
-            Pág. {pageIndex + 1} / {pageCount}
+          <span className="px-3 py-1 rounded border text-xs font-medium min-w-[70px] text-center">
+            {pageIndex + 1} / {pageCount}
           </span>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={pageIndex >= pageCount - 1}
-            onClick={() => setPageIndex((p) => p + 1)}
-          >
+          <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageIndex >= pageCount - 1} onClick={() => setPageIndex((p) => p + 1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

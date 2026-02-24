@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +25,7 @@ import {
   User,
   Hash,
   Cpu,
+  History,
 } from "lucide-react";
 import { apiGetUnit, apiRetireUnit, apiUnitQr } from "../../_lib/api";
 import type { StorageUnit } from "../../_lib/types";
@@ -273,12 +273,17 @@ export default function UnitDetailPage() {
         </p>
       )}
 
-      <Separator />
-
       {/* Timeline */}
-      <div>
-        <h2 className="font-semibold mb-4">Historial de la unidad</h2>
-        <UnitTimeline unitId={unit.id} refreshKey={refreshKey} />
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <History className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <p className="text-sm font-semibold leading-none">Historial de la unidad</p>
+        </div>
+        <div className="p-5">
+          <UnitTimeline unitId={unit.id} refreshKey={refreshKey} />
+        </div>
       </div>
 
       {/* Dialogs */}

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft,
   Pencil,
@@ -13,13 +13,11 @@ import {
   TrendingDown,
   AlertTriangle,
   CheckCircle2,
-  Plus,
   ArrowDownToLine,
   ArrowUpFromLine,
   SlidersHorizontal,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { apiGetProduct, apiProductQr } from "../../_lib/api";
 import type { StorageProductDetail } from "../../_lib/types";
 import { KindBadge } from "../../_lib/utils";
@@ -156,15 +154,18 @@ export default function ProductDetailPage() {
       {/* CONSUMABLE detail */}
       {isConsumable && (
         <>
-          <Card>
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between mb-3">
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Package className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-sm font-semibold leading-none">Stock actual</p>
+            </div>
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Stock actual</p>
                   <div className="flex items-baseline gap-2">
-                    <span
-                      className={`text-4xl font-bold ${level?.color ?? "text-foreground"}`}
-                    >
+                    <span className={`text-4xl font-bold ${level?.color ?? "text-foreground"}`}>
                       {stock}
                     </span>
                     <span className="text-muted-foreground">{product.unit}</span>
@@ -194,29 +195,16 @@ export default function ProductDetailPage() {
                   )}
                 </div>
                 {canRegister && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => setMovDialog("ENTRY")}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => setMovDialog("ENTRY")} className="bg-green-600 hover:bg-green-700">
                       <ArrowDownToLine className="h-4 w-4 mr-1" />
                       Ingreso
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setMovDialog("EXIT")}
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setMovDialog("EXIT")} className="text-red-600 border-red-200 hover:bg-red-50">
                       <ArrowUpFromLine className="h-4 w-4 mr-1" />
                       Salida
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setMovDialog("ADJUSTMENT")}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setMovDialog("ADJUSTMENT")}>
                       <SlidersHorizontal className="h-4 w-4 mr-1" />
                       Ajuste
                     </Button>
@@ -225,26 +213,14 @@ export default function ProductDetailPage() {
               </div>
               {min > 0 && (
                 <div className="space-y-1">
-                  <Progress
-                    value={stockPct}
-                    className="h-2"
-                    style={
-                      {
-                        "--progress-foreground": level?.barColor
-                          ? level.barColor.replace("bg-", "")
-                          : undefined,
-                      } as React.CSSProperties
-                    }
-                  />
+                  <Progress value={stockPct} className="h-2" />
                   <p className="text-xs text-muted-foreground text-right">
                     {stockPct}% del nivel objetivo
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Separator />
+            </div>
+          </div>
 
           <MovementsTable
             productId={product.id}
@@ -273,8 +249,6 @@ export default function ProductDetailPage() {
               </Card>
             ))}
           </div>
-
-          <Separator />
 
           <UnitsTable
             productId={product.id}

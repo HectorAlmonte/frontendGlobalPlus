@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, ChevronLeft, ChevronRight, Plus, Wrench, UserCheck, RotateCcw } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, Plus, Wrench, UserCheck, RotateCcw, Cpu, Search } from "lucide-react";
 import { apiListUnits } from "../_lib/api";
 import type { StorageUnit, EquipmentStatus } from "../_lib/types";
 import { EquipmentStatusBadge, ConditionBadge, fmtDate, employeeName } from "../_lib/utils";
@@ -97,20 +97,35 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 items-center justify-between">
-        <div className="flex gap-2">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar asset code / serie..."
-            className="w-52"
-          />
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 sm:items-center px-5 py-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3 sm:flex-1 min-w-0">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Cpu className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-none">Unidades de equipo</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {units.length} unidad{units.length !== 1 ? "es" : ""}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center sm:shrink-0">
+          <div className="relative w-full sm:w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Asset code / serie..."
+              className="pl-8 h-9 w-full"
+            />
+          </div>
           <Select
             value={filterStatus}
             onValueChange={(v) => setFilterStatus(v as EquipmentStatus | "ALL")}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44 h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -121,60 +136,61 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
               <SelectItem value="RETIRED">Retirado</SelectItem>
             </SelectContent>
           </Select>
+          {canManage && (
+            <Button size="sm" className="h-9 gap-2 shrink-0" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Registrar unidad</span>
+            </Button>
+          )}
         </div>
-        {canManage && (
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Registrar unidad
-          </Button>
-        )}
       </div>
 
-      <div className="rounded-md border">
+      {/* Table */}
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Asset Code</TableHead>
-              <TableHead>N° Serie</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Condición</TableHead>
-              <TableHead>Asignado a</TableHead>
-              <TableHead>Fecha asignación</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+            <TableRow className="bg-muted/30">
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Asset Code</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">N° Serie</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Estado</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden md:table-cell">Condición</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden md:table-cell">Asignado a</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Fecha asignación</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : paginatedRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                   Sin unidades registradas
                 </TableCell>
               </TableRow>
             ) : (
               paginatedRows.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-mono text-sm">
+                <TableRow key={u.id} className="hover:bg-muted/40 transition-colors">
+                  <TableCell className="font-mono text-sm font-semibold text-primary">
                     {u.assetCode || "—"}
                   </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
+                  <TableCell className="font-mono text-xs text-muted-foreground hidden sm:table-cell">
                     {u.serialNumber || "—"}
                   </TableCell>
                   <TableCell>
                     <EquipmentStatusBadge status={u.status} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <ConditionBadge condition={u.condition} />
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-sm hidden md:table-cell">
                     {u.assignedTo ? employeeName(u.assignedTo) : "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">
                     {u.assignedAt ? fmtDate(u.assignedAt) : "—"}
                   </TableCell>
                   <TableCell>
@@ -182,6 +198,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
                       <Button
                         size="icon"
                         variant="ghost"
+                        className="h-8 w-8"
                         title="Ver detalle"
                         onClick={() => router.push(`/dashboard/storage/units/${u.id}`)}
                       >
@@ -191,6 +208,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-8 w-8"
                           title="Asignar"
                           onClick={() => setAssignUnit(u)}
                         >
@@ -201,6 +219,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-8 w-8"
                           title="Enviar a mantenimiento"
                           onClick={() => setMaintUnit({ unit: u, mode: "start" })}
                         >
@@ -211,6 +230,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-8 w-8"
                           title="Registrar devolución"
                           onClick={() => setReturnUnit(u)}
                         >
@@ -221,6 +241,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-8 w-8"
                           title="Finalizar mantenimiento"
                           onClick={() => setMaintUnit({ unit: u, mode: "finish" })}
                         >
@@ -237,28 +258,16 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {units.length} unidad{units.length !== 1 ? "es" : ""}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={pageIndex === 0}
-            onClick={() => setPageIndex((p) => p - 1)}
-          >
+      <div className="flex items-center justify-between px-5 py-3 border-t text-sm text-muted-foreground">
+        <span className="text-xs">{units.length} unidad{units.length !== 1 ? "es" : ""}</span>
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageIndex === 0} onClick={() => setPageIndex((p) => p - 1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span>
-            Pág. {pageIndex + 1} / {pageCount}
+          <span className="px-3 py-1 rounded border text-xs font-medium min-w-[70px] text-center">
+            {pageIndex + 1} / {pageCount}
           </span>
-          <Button
-            size="icon"
-            variant="outline"
-            disabled={pageIndex >= pageCount - 1}
-            onClick={() => setPageIndex((p) => p + 1)}
-          >
+          <Button size="icon" variant="outline" className="h-8 w-8" disabled={pageIndex >= pageCount - 1} onClick={() => setPageIndex((p) => p + 1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

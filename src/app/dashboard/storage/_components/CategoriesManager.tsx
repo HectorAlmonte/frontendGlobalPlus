@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Loader2 } from "lucide-react";
+import { Plus, Pencil, Loader2, Tag } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -127,30 +127,38 @@ export default function CategoriesManager() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {items.length} categoría{items.length !== 1 ? "s" : ""}
-        </p>
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Tag className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-none">Categorías</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {items.length} categoría{items.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
         {canEdit && (
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="sm" className="h-8 gap-1.5 text-xs shrink-0" onClick={openCreate}>
+            <Plus className="h-3.5 w-3.5" />
             Nueva categoría
           </Button>
         )}
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Productos</TableHead>
-              <TableHead>Estado</TableHead>
-              {canEdit && <TableHead className="text-right">Acciones</TableHead>}
+            <TableRow className="bg-muted/30">
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Nombre</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Descripción</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Productos</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Estado</TableHead>
+              {canEdit && <TableHead className="text-xs text-muted-foreground uppercase tracking-wide text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -168,9 +176,9 @@ export default function CategoriesManager() {
               </TableRow>
             ) : (
               items.map((cat) => (
-                <TableRow key={cat.id}>
-                  <TableCell className="font-medium">{cat.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                <TableRow key={cat.id} className="hover:bg-muted/40 transition-colors">
+                  <TableCell className="font-medium text-sm">{cat.name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
                     {cat.description ?? "—"}
                   </TableCell>
                   <TableCell>
@@ -188,7 +196,7 @@ export default function CategoriesManager() {
                     ) : (
                       <Badge
                         variant={cat.isActive ? "outline" : "secondary"}
-                        className={cat.isActive ? "text-green-700 border-green-300" : ""}
+                        className={cat.isActive ? "text-green-700 border-green-300 text-xs" : "text-xs"}
                       >
                         {cat.isActive ? "Activa" : "Inactiva"}
                       </Badge>
@@ -199,6 +207,7 @@ export default function CategoriesManager() {
                       <Button
                         size="icon"
                         variant="ghost"
+                        className="h-8 w-8"
                         onClick={() => openEdit(cat)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -264,3 +273,4 @@ export default function CategoriesManager() {
     </div>
   );
 }
+
