@@ -12,7 +12,7 @@ import {
 } from "recharts"
 import {
   AlertTriangle, ArrowRight, BarChart3, ChevronRight,
-  ClipboardList, LayoutDashboard, Plus,
+  ClipboardList, LayoutDashboard, Plus, HardHat, Package, ClipboardCheck,
 } from "lucide-react"
 
 const API = process.env.NEXT_PUBLIC_API_URL || ""
@@ -28,6 +28,17 @@ type IncidentStats = {
   avgCloseDays: number
 }
 
+type EppStats = { total: number; unsigned: number; thisMonth: number }
+
+type StorageStats = {
+  totalActiveProducts: number
+  criticalStockCount: number
+  lowStockCount: number
+  equipmentSummary: { available: number; assigned: number; inMaintenance: number }
+}
+
+type TaskStats = { total: number; overdue: number; completionRate: number }
+
 type RecentIncident = {
   id: string
   number?: number
@@ -42,6 +53,27 @@ type RecentIncident = {
 async function fetchStats(): Promise<IncidentStats | null> {
   try {
     const r = await fetch(`${API}/api/incidents/stats`, { credentials: "include", cache: "no-store" })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
+async function fetchEppStats(): Promise<EppStats | null> {
+  try {
+    const r = await fetch(`${API}/api/epp/stats`, { credentials: "include", cache: "no-store" })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
+async function fetchStorageStats(): Promise<StorageStats | null> {
+  try {
+    const r = await fetch(`${API}/api/storage/stats`, { credentials: "include", cache: "no-store" })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
+async function fetchTaskStats(): Promise<TaskStats | null> {
+  try {
+    const r = await fetch(`${API}/api/tasks/stats`, { credentials: "include", cache: "no-store" })
     return r.ok ? r.json() : null
   } catch { return null }
 }
@@ -96,14 +128,23 @@ function firstName(user: any) {
 export default function DashboardPage() {
   const { setWord, user } = useWord()
   const [stats, setStats] = useState<IncidentStats | null>(null)
+  const [eppStats, setEppStats] = useState<EppStats | null>(null)
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null)
+  const [taskStats, setTaskStats] = useState<TaskStats | null>(null)
   const [recent, setRecent] = useState<RecentIncident[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { setWord("Dashboard") }, [setWord])
 
   useEffect(() => {
-    Promise.all([fetchStats(), fetchRecent()])
-      .then(([s, r]) => { setStats(s); setRecent(r) })
+    Promise.all([fetchStats(), fetchEppStats(), fetchStorageStats(), fetchTaskStats(), fetchRecent()])
+      .then(([s, epp, storage, tasks, r]) => {
+        setStats(s)
+        setEppStats(epp)
+        setStorageStats(storage)
+        setTaskStats(tasks)
+        setRecent(r)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -113,6 +154,10 @@ export default function DashboardPage() {
   const resolutionPct = stats
     ? Math.min(100, Math.round(stats.resolutionRate > 1 ? stats.resolutionRate : stats.resolutionRate * 100))
     : 0
+  const taskCompletionPct = taskStats
+    ? Math.min(100, Math.round(taskStats.completionRate > 1 ? taskStats.completionRate : taskStats.completionRate * 100))
+    : 0
+  const storageAlerts = (storageStats?.criticalStockCount ?? 0) + (storageStats?.lowStockCount ?? 0)
 
   const typeChartData = useMemo(() => {
     if (!stats?.byType) return []
@@ -194,6 +239,116 @@ export default function DashboardPage() {
             )}
           </Link>
         ))}
+      </div>
+
+      {/* ── Módulos ── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+
+        {/* EPP */}
+        <Link href="/dashboard/epp" className="group rounded-xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <HardHat className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">EPP</p>
+            <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {loading ? (
+              <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
+            ) : eppStats ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total entregas</span>
+                  <span className="font-semibold tabular-nums">{eppStats.total}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Sin firma</span>
+                  <span className={`font-semibold tabular-nums ${eppStats.unsigned > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                    {eppStats.unsigned}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Este mes</span>
+                  <span className="font-semibold tabular-nums">{eppStats.thisMonth}</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin datos disponibles</p>
+            )}
+          </div>
+        </Link>
+
+        {/* Almacén */}
+        <Link href="/dashboard/storage" className="group rounded-xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Package className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">Almacén</p>
+            <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {loading ? (
+              <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
+            ) : storageStats ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Productos activos</span>
+                  <span className="font-semibold tabular-nums">{storageStats.totalActiveProducts}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Alertas de stock</span>
+                  <span className={`font-semibold tabular-nums ${storageAlerts > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                    {storageAlerts}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Equipos disponibles</span>
+                  <span className="font-semibold tabular-nums">{storageStats.equipmentSummary.available}</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin datos disponibles</p>
+            )}
+          </div>
+        </Link>
+
+        {/* Tareas */}
+        <Link href="/dashboard/tasks" className="group rounded-xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <ClipboardCheck className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">Tareas</p>
+            <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {loading ? (
+              <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
+            ) : taskStats ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total tareas</span>
+                  <span className="font-semibold tabular-nums">{taskStats.total}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Vencidas</span>
+                  <span className={`font-semibold tabular-nums ${taskStats.overdue > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                    {taskStats.overdue}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">% Completadas</span>
+                  <span className="font-semibold tabular-nums">{taskCompletionPct}%</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin datos disponibles</p>
+            )}
+          </div>
+        </Link>
+
       </div>
 
       {/* ── Análisis ── */}

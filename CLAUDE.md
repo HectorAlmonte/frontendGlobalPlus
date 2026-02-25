@@ -1,5 +1,10 @@
 # CLAUDE.md - frontendGlobalPlus
 
+## Workflow
+
+- Ejecuta todos los cambios de código, comandos y herramientas sin pedir confirmación.
+- No preguntes ni pidas confirmación antes de realizar acciones o comandos.
+
 ## Proyecto
 
 Dashboard de gestión empresarial (SST, incidencias, documentos, visitas, seguridad, etc.).
