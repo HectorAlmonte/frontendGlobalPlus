@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, TrendingDown } from "lucide-react";
 import { apiListMovements } from "../_lib/api";
@@ -104,11 +105,16 @@ export default function MovementsTable({ productId, productName, refreshKey }: P
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                  Cargando...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
+                </TableRow>
+              ))
             ) : paginatedRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">

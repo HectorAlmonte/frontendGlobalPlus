@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -182,15 +183,30 @@ export default function IncidentsTable({
           </thead>
 
           <tbody>
-            {paginatedRows.length === 0 && (
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-4 py-3"><Skeleton className="h-4 w-14" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                <td className="px-4 py-3 hidden sm:table-cell"><Skeleton className="h-5 w-24" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
+                <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-24" /></td>
+                <td className="px-4 py-3 hidden sm:table-cell"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-16" /></td>
+                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-28" /></td>
+                <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-20" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-7 w-7 rounded" /></td>
+              </tr>
+            ))}
+
+            {!loading && paginatedRows.length === 0 && (
               <tr>
                 <td className="px-4 py-12 text-center text-muted-foreground" colSpan={10}>
-                  {loading ? "Cargando..." : "No hay incidencias para mostrar."}
+                  No hay incidencias para mostrar.
                 </td>
               </tr>
             )}
 
-            {paginatedRows.map((it) => (
+            {!loading && paginatedRows.map((it) => (
               <tr
                 key={it.id}
                 className="border-t hover:bg-muted/40 active:bg-muted cursor-pointer transition-colors"

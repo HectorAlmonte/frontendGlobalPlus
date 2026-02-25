@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,15 +134,26 @@ export default function RolesTable({ refreshKey, onEditClick }: Props) {
           </thead>
 
           <tbody>
-            {rows.length === 0 && (
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-3 py-2"><Skeleton className="h-4 w-24" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-4 w-32" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-4 w-8" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-4 w-8" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-5 w-10 rounded-full" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-7 w-14 rounded ml-auto" /></td>
+              </tr>
+            ))}
+
+            {!loading && rows.length === 0 && (
               <tr>
                 <td className="px-3 py-6 text-center text-muted-foreground" colSpan={6}>
-                  {loading ? "Cargando..." : "Sin roles"}
+                  Sin roles
                 </td>
               </tr>
             )}
 
-            {rows.map((r) => (
+            {!loading && rows.map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="px-3 py-2 font-mono">{r.key}</td>
 

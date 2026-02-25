@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -331,18 +332,28 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
           </thead>
 
           <tbody>
-            {paginatedRows.length === 0 && (
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-3 py-2"><Skeleton className="h-4 w-20 font-mono" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-4 w-36" /></td>
+                <td className="px-3 py-2 hidden sm:table-cell"><Skeleton className="h-4 w-40" /></td>
+                <td className="px-3 py-2 hidden md:table-cell"><Skeleton className="h-4 w-28" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                <td className="px-3 py-2 hidden sm:table-cell"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-7 w-7 rounded" /></td>
+              </tr>
+            ))}
+
+            {!loading && paginatedRows.length === 0 && (
               <tr>
-                <td
-                  className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={8}
-                >
-                  {loading ? "Cargando..." : "Sin registros de personal"}
+                <td className="px-3 py-6 text-center text-muted-foreground" colSpan={8}>
+                  Sin registros de personal
                 </td>
               </tr>
             )}
 
-            {paginatedRows.map((s) => (
+            {!loading && paginatedRows.map((s) => (
               <tr key={s.id} className="border-t hover:bg-muted/30">
                 <td className="px-3 py-2 font-mono font-medium">{s.dni}</td>
 

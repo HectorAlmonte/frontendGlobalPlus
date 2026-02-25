@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
@@ -166,18 +167,25 @@ export default function WorkAreasTable({
           </thead>
 
           <tbody>
-            {paginatedRows.length === 0 && (
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-3 py-2"><Skeleton className="h-4 w-20" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-4 w-40" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-4 w-48" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-5 w-10 rounded-full" /></td>
+                <td className="px-3 py-2"><Skeleton className="h-7 w-14 rounded ml-auto" /></td>
+              </tr>
+            ))}
+
+            {!loading && paginatedRows.length === 0 && (
               <tr>
-                <td
-                  className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={5}
-                >
-                  {loading ? "Cargando..." : "Sin áreas de trabajo"}
+                <td className="px-3 py-6 text-center text-muted-foreground" colSpan={5}>
+                  Sin áreas de trabajo
                 </td>
               </tr>
             )}
 
-            {paginatedRows.map((a) => (
+            {!loading && paginatedRows.map((a) => (
               <tr key={a.id} className="border-t hover:bg-muted/30">
                 <td className="px-3 py-2 font-mono font-medium">{a.code}</td>
 

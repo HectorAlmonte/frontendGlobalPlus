@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -154,15 +155,28 @@ export default function DocumentsTable({
           </thead>
 
           <tbody>
-            {paginatedRows.length === 0 && (
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
+                <td className="px-4 py-3 hidden sm:table-cell"><Skeleton className="h-5 w-24 rounded-full" /></td>
+                <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-28" /></td>
+                <td className="px-4 py-3 hidden sm:table-cell"><Skeleton className="h-4 w-12" /></td>
+                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                <td className="px-4 py-3 text-right"><Skeleton className="h-7 w-7 rounded ml-auto" /></td>
+              </tr>
+            ))}
+
+            {!loading && paginatedRows.length === 0 && (
               <tr>
                 <td className="px-4 py-12 text-center text-muted-foreground" colSpan={8}>
-                  {loading ? "Cargando..." : "No hay documentos para mostrar."}
+                  No hay documentos para mostrar.
                 </td>
               </tr>
             )}
 
-            {paginatedRows.map((doc) => {
+            {!loading && paginatedRows.map((doc) => {
               const isExpired = doc.currentVersion?.isExpired ?? false;
               return (
                 <tr

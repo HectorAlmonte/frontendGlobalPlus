@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -209,8 +210,25 @@ export default function AdminNavigationPage() {
 
       {/* Loading */}
       {loading && (
-        <div className="text-sm text-muted-foreground py-10 text-center">
-          Cargando secciones...
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border bg-card shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-3 bg-muted/30 border-b">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-16 ml-auto" />
+              </div>
+              <div className="p-4 space-y-2">
+                {[1, 2].map((j) => (
+                  <div key={j} className="flex items-center gap-3 rounded-lg border px-4 py-2.5">
+                    <Skeleton className="h-4 w-4 rounded" />
+                    <Skeleton className="h-4 w-40 flex-1" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
