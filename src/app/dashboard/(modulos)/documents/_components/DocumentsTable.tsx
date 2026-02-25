@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Search, RefreshCw } from "lucide-react";
+import { FileText, Search, RefreshCw, Download } from "lucide-react";
+import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 
 import type { DocumentRow, DocumentType } from "../_lib/types";
 import { statusBadge, formatDate, moduleKeyLabel } from "../_lib/utils";
@@ -81,6 +82,26 @@ export default function DocumentsTable({
 
   useEffect(() => { setPageIndex(0); }, [filtered.length, pageSize]);
 
+  function handleExport() {
+    const rows = filtered.map((doc) => ({
+      Código: doc.code || "",
+      Nombre: doc.name,
+      Tipo: doc.documentType?.name ?? "",
+      Área: doc.workArea?.name ?? "",
+      Módulo: doc.moduleKey ?? "",
+      Versión: doc.currentVersion?.versionNumber ?? "",
+      "Vigente desde": doc.currentVersion?.validFrom
+        ? formatDate(doc.currentVersion.validFrom)
+        : "",
+      "Vigente hasta": doc.currentVersion?.validUntil
+        ? formatDate(doc.currentVersion.validUntil)
+        : "",
+      Estado: doc.currentVersion?.isExpired ? "Expirado" : "Vigente",
+      Activo: doc.isActive ? "Sí" : "No",
+    }));
+    downloadXlsx(rows, `documentos_${todayStr()}`);
+  }
+
   return (
     <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
 
@@ -131,6 +152,10 @@ export default function DocumentsTable({
               <SelectItem value="EXPIRADO">Expirado</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleExport} disabled={loading || filtered.length === 0} title="Exportar a Excel">
+            <Download className="h-4 w-4" />
+          </Button>
 
           <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={onRefresh} disabled={loading} title="Recargar">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />

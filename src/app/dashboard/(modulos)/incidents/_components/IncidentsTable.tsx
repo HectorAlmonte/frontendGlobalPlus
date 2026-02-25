@@ -17,7 +17,8 @@ import {
 
 import { FilterPopover } from "@/components/filter-popover";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { ClipboardList, Search, RefreshCw } from "lucide-react";
+import { ClipboardList, Search, RefreshCw, Download } from "lucide-react";
+import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 
 import type { IncidentListItem, IncidentStatus } from "../_lib/types";
 import { statusBadge, priorityBadge } from "../_lib/utils";
@@ -91,6 +92,32 @@ export default function IncidentsTable({
     onFiltersChange({ q: filters.q, status: "ALL" });
   };
 
+  const STATUS_LABEL: Record<string, string> = {
+    OPEN: "Pendiente",
+    IN_PROGRESS: "En proceso",
+    CLOSED: "Cerrada",
+  };
+
+  function handleExport() {
+    const rows = items.map((it) => ({
+      Folio: formatFolio(it.number),
+      Estado: STATUS_LABEL[it.status] ?? it.status,
+      Tipo: formatType(it.type),
+      Título: it.title ?? "",
+      Área: it.area?.name ?? it.areaNameSnapshot ?? "",
+      Prioridad: it.corrective?.priority ?? "—",
+      Objetivos:
+        (it._count?.subtasks ?? 0) > 0
+          ? `${it._count?.subtasksCompleted ?? 0}/${it._count?.subtasks}`
+          : "—",
+      "Reportado por": it.reportedBy?.employee
+        ? `${it.reportedBy.employee.nombres} ${it.reportedBy.employee.apellidos ?? ""}`.trim()
+        : "—",
+      Fecha: formatDate(it.reportedAt),
+    }));
+    downloadXlsx(rows, `incidencias_${todayStr()}`);
+  }
+
   return (
     <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
 
@@ -150,6 +177,17 @@ export default function IncidentsTable({
               />
             </div>
           </FilterPopover>
+
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-9 w-9 shrink-0"
+            onClick={handleExport}
+            disabled={loading || items.length === 0}
+            title="Exportar a Excel"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
 
           <Button
             size="icon"

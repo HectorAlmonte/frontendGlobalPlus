@@ -30,7 +30,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterPopover } from "@/components/filter-popover";
-import { MoreHorizontal, Copy, Check, RefreshCw } from "lucide-react";
+import { MoreHorizontal, Copy, Check, RefreshCw, Download } from "lucide-react";
+import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 import { toast } from "sonner";
 
 import type { StaffRow } from "../_lib/types";
@@ -122,6 +123,24 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
   );
 
   useEffect(() => setPageIndex(0), [filtered, pageSize]);
+
+  function handleExport() {
+    const rows = filtered.map((s) => ({
+      DNI: s.dni,
+      Nombres: s.nombres,
+      Apellidos: s.apellidos,
+      Correo: s.email || "",
+      Cargo: s.cargo || "",
+      Roles: s.roles.map((r) => r.name).join(", "),
+      Estado: s.status,
+      "Fecha ingreso": s.fechaIngreso
+        ? new Date(s.fechaIngreso).toLocaleDateString("es-PE")
+        : "",
+      "Tiene cuenta": s.user ? "Sí" : "No",
+      "Cuenta activa": s.user ? (s.user.isActive ? "Sí" : "No") : "",
+    }));
+    downloadXlsx(rows, `personal_${todayStr()}`);
+  }
 
   /* ── Carga ── */
   const load = async () => {
@@ -296,6 +315,10 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
               </Select>
             </div>
           </FilterPopover>
+
+          <Button size="sm" variant="outline" onClick={handleExport} disabled={loading || filtered.length === 0} title="Exportar a Excel">
+            <Download className="h-4 w-4" />
+          </Button>
 
           <Button size="sm" variant="outline" onClick={load} disabled={loading}>
             <RefreshCw className="h-4 w-4" />
