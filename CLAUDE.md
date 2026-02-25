@@ -28,20 +28,35 @@ npm run lint    # ESLint
 ```
 src/
 ├── app/
-│   ├── dashboard/           # Módulos principales (cada uno con su estructura)
-│   │   ├── areas/           # Áreas (incidencias)
-│   │   ├── documents/       # Control documental
-│   │   ├── incidents/       # Incidencias
-│   │   ├── work-areas/      # Áreas de trabajo (documentos)
-│   │   ├── ordenes/         # Órdenes
-│   │   ├── visitas/         # Visitas
-│   │   ├── seguridad/       # Seguridad
-│   │   ├── tasks/           # Tareas
-│   │   ├── staff/           # Gestión de personal (multi-rol)
-│   │   └── me/              # Perfil de usuario
+│   ├── dashboard/
+│   │   ├── (modulos)/           # Route group — URL no cambia
+│   │   │   ├── incidents/       # /dashboard/incidents
+│   │   │   ├── storage/         # /dashboard/storage
+│   │   │   ├── documents/       # /dashboard/documents
+│   │   │   ├── epp/             # /dashboard/epp
+│   │   │   ├── tasks/           # /dashboard/tasks
+│   │   │   ├── ordenes/         # /dashboard/ordenes
+│   │   │   └── visitas/         # /dashboard/visitas
+│   │   ├── (configuracion)/     # Route group
+│   │   │   ├── areas/           # /dashboard/areas
+│   │   │   ├── work-areas/      # /dashboard/work-areas
+│   │   │   ├── staff/           # /dashboard/staff
+│   │   │   └── forms/           # /dashboard/forms/...
+│   │   ├── (admin)/             # Route group
+│   │   │   └── admin/
+│   │   │       └── navigation/  # /dashboard/admin/navigation
+│   │   ├── (perfil)/            # Route group
+│   │   │   ├── me/              # /dashboard/me
+│   │   │   └── settings/        # /dashboard/settings/change-password
+│   │   ├── (seguridad)/         # Route group
+│   │   │   └── seguridad/       # /dashboard/seguridad
+│   │   ├── layout.tsx
+│   │   └── page.tsx             # Dashboard principal
 │   └── ...
 ├── components/
 │   ├── ui/                  # shadcn/ui components
+│   ├── shared/              # Componentes reutilizables entre módulos
+│   │   └── SearchSelect.tsx # Combobox de búsqueda genérico
 │   ├── app-sidebar.tsx      # Sidebar principal (nav dinámica desde API)
 │   └── nav-main.tsx         # Navegación con secciones colapsables
 ├── context/
@@ -50,12 +65,14 @@ src/
     └── utils.ts             # cn() helper + hasRole()
 ```
 
+> **Route Groups**: las carpetas `(nombre)` organizan código sin afectar las URLs. Mover un módulo a otro grupo no requiere cambios en el backend ni en los links del sidebar.
+
 ## Estructura de cada módulo
 
 Todos los módulos del dashboard siguen esta convención:
 
 ```
-src/app/dashboard/<modulo>/
+src/app/dashboard/(grupo)/<modulo>/
 ├── page.tsx              # "use client", página principal
 ├── _lib/
 │   ├── types.ts          # Tipos TypeScript
@@ -63,6 +80,11 @@ src/app/dashboard/<modulo>/
 │   └── utils.tsx         # Badges, formatters (opcional)
 └── _components/          # Componentes del módulo
 ```
+
+## Componentes compartidos entre módulos
+
+- `@/components/shared/SearchSelect.tsx` — Combobox de búsqueda genérico (no importar desde incidents)
+- Imports cross-módulo SIEMPRE usar paths absolutos `@/app/dashboard/(grupo)/modulo/...`
 
 ## Patrones clave
 

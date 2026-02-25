@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts"
-import { AlertTriangle, ArrowRight, ChevronRight, Plus } from "lucide-react"
+import {
+  AlertTriangle, ArrowRight, BarChart3, ChevronRight,
+  ClipboardList, LayoutDashboard, Plus,
+} from "lucide-react"
 
 const API = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -122,14 +125,29 @@ export default function DashboardPage() {
   const BAR_COLORS = ["#f59e0b", "#ef4444", "#f97316", "#ec4899"]
 
   return (
-    <div className="flex flex-1 flex-col gap-10 p-6 sm:p-10 max-w-5xl mx-auto w-full">
+    <div className="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6 sm:py-7 space-y-6">
 
-      {/* ── Greeting ── */}
-      <div>
-        <p className="text-sm text-muted-foreground capitalize mb-1">{currentDate()}</p>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {greeting()}{firstName(user) ? `, ${firstName(user)}` : ""}
-        </h1>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">
+              {greeting()}{firstName(user) ? `, ${firstName(user)}` : ""}
+            </h1>
+            <p className="text-sm text-muted-foreground capitalize">{currentDate()}</p>
+          </div>
+        </div>
+        {isSupervisor && (
+          <Button asChild size="sm" className="gap-2 shrink-0">
+            <Link href="/dashboard/incidents">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nueva incidencia</span>
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* ── Alerta ── */}
@@ -153,9 +171,9 @@ export default function DashboardPage() {
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total",       value: stats?.total ?? 0,                   color: "text-foreground",  accent: "hover:border-border",           href: "/dashboard/incidents" },
-          { label: "Abiertas",    value: openCount,                            color: "text-amber-500",   accent: "hover:border-amber-300 dark:hover:border-amber-700",  href: "/dashboard/incidents?status=OPEN" },
-          { label: "En progreso", value: stats?.byStatus?.IN_PROGRESS ?? 0,   color: "text-blue-500",    accent: "hover:border-blue-300 dark:hover:border-blue-700",    href: "/dashboard/incidents?status=IN_PROGRESS" },
+          { label: "Total",       value: stats?.total ?? 0,                   color: "text-foreground",  accent: "hover:border-border",                                    href: "/dashboard/incidents" },
+          { label: "Abiertas",    value: openCount,                            color: "text-amber-500",   accent: "hover:border-amber-300 dark:hover:border-amber-700",     href: "/dashboard/incidents?status=OPEN" },
+          { label: "En progreso", value: stats?.byStatus?.IN_PROGRESS ?? 0,   color: "text-blue-500",    accent: "hover:border-blue-300 dark:hover:border-blue-700",       href: "/dashboard/incidents?status=IN_PROGRESS" },
           { label: "Cerradas",    value: stats?.byStatus?.CLOSED ?? 0,        color: "text-emerald-500", accent: "hover:border-emerald-300 dark:hover:border-emerald-700", href: "/dashboard/incidents?status=CLOSED" },
         ].map(({ label, value, color, accent, href }) => (
           <Link
@@ -178,119 +196,128 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="h-px bg-border/70" />
-
-      {/* ── Gráfica + Métricas ── */}
-      <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
-
-        {/* Bar chart por tipo */}
-        <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Por tipo</p>
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}
-            </div>
-          ) : typeChartData.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin datos disponibles.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={typeChartData.length * 48}>
-              <BarChart
-                data={typeChartData}
-                layout="vertical"
-                margin={{ top: 0, right: 32, left: 0, bottom: 0 }}
-                barSize={22}
-              >
-                <XAxis type="number" hide />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={140}
-                  tick={{ fontSize: 13, fill: "hsl(var(--foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: "hsl(var(--muted))" }}
-                  content={({ active, payload }) =>
-                    active && payload?.length
-                      ? <div className="rounded-md border bg-background px-3 py-1.5 text-xs shadow-md">
-                          {payload[0].payload.name}: <b>{payload[0].value}</b>
-                        </div>
-                      : null
-                  }
-                />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {typeChartData.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+      {/* ── Análisis ── */}
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <BarChart3 className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <p className="text-sm font-semibold">Análisis</p>
         </div>
+        <div className="p-5 grid gap-8 lg:grid-cols-2 lg:items-start">
 
-        {/* Métricas verticales */}
-        <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Rendimiento</p>
-          {loading ? (
-            <div className="space-y-5">
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-5 w-full" />)}
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {/* Resolución */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tasa de resolución</span>
-                  <span className="font-semibold tabular-nums">{resolutionPct}%</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${resolutionPct}%`,
-                      backgroundColor: resolutionPct >= 70 ? "#10b981" : resolutionPct >= 40 ? "#f59e0b" : "#ef4444",
-                    }}
+          {/* Bar chart por tipo */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Por tipo</p>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}
+              </div>
+            ) : typeChartData.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin datos disponibles.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={typeChartData.length * 48}>
+                <BarChart
+                  data={typeChartData}
+                  layout="vertical"
+                  margin={{ top: 0, right: 32, left: 0, bottom: 0 }}
+                  barSize={22}
+                >
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={140}
+                    tick={{ fontSize: 13, fill: "hsl(var(--foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                </div>
+                  <Tooltip
+                    cursor={{ fill: "hsl(var(--muted))" }}
+                    content={({ active, payload }) =>
+                      active && payload?.length
+                        ? <div className="rounded-md border bg-background px-3 py-1.5 text-xs shadow-md">
+                            {payload[0].payload.name}: <b>{payload[0].value}</b>
+                          </div>
+                        : null
+                    }
+                  />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                    {typeChartData.map((_, i) => (
+                      <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Métricas verticales */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Rendimiento</p>
+            {loading ? (
+              <div className="space-y-5">
+                {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-5 w-full" />)}
               </div>
-
-              {/* Tiempo promedio */}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tiempo prom. de cierre</span>
-                <span className="font-semibold tabular-nums">
-                  {stats?.avgCloseDays != null ? `${stats.avgCloseDays.toFixed(1)} días` : "—"}
-                </span>
-              </div>
-
-              <div className="h-px bg-border/70" />
-
-              {/* Prioridades */}
-              {[
-                { label: "Prioridad alta",  value: stats?.byPriority?.ALTA  ?? 0, dot: "#ef4444" },
-                { label: "Prioridad media", value: stats?.byPriority?.MEDIA ?? 0, dot: "#f59e0b" },
-                { label: "Prioridad baja",  value: stats?.byPriority?.BAJA  ?? 0, dot: "#3b82f6" },
-              ].map(({ label, value, dot }) => (
-                <div key={label} className="flex justify-between items-center text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: dot }} />
-                    {label}
+            ) : (
+              <div className="space-y-5">
+                {/* Resolución */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Tasa de resolución</span>
+                    <span className="font-semibold tabular-nums">{resolutionPct}%</span>
                   </div>
-                  <span className="font-semibold tabular-nums">{value}</span>
+                  <div className="h-1.5 w-full rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${resolutionPct}%`,
+                        backgroundColor: resolutionPct >= 70 ? "#10b981" : resolutionPct >= 40 ? "#f59e0b" : "#ef4444",
+                      }}
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Tiempo promedio */}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tiempo prom. de cierre</span>
+                  <span className="font-semibold tabular-nums">
+                    {stats?.avgCloseDays != null ? `${stats.avgCloseDays.toFixed(1)} días` : "—"}
+                  </span>
+                </div>
+
+                <div className="h-px bg-border/70" />
+
+                {/* Prioridades */}
+                {[
+                  { label: "Prioridad alta",  value: stats?.byPriority?.ALTA  ?? 0, dot: "#ef4444" },
+                  { label: "Prioridad media", value: stats?.byPriority?.MEDIA ?? 0, dot: "#f59e0b" },
+                  { label: "Prioridad baja",  value: stats?.byPriority?.BAJA  ?? 0, dot: "#3b82f6" },
+                ].map(({ label, value, dot }) => (
+                  <div key={label} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: dot }} />
+                      {label}
+                    </div>
+                    <span className="font-semibold tabular-nums">{value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="h-px bg-border/70" />
-
       {/* ── Recientes ── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Recientes</p>
-          <Button asChild variant="ghost" size="sm" className="h-6 text-xs gap-0.5 text-muted-foreground hover:text-foreground px-2">
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <ClipboardList className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">Incidencias recientes</p>
+          </div>
+          <Button asChild variant="ghost" size="sm" className="h-7 text-xs gap-0.5 text-muted-foreground hover:text-foreground px-2">
             <Link href="/dashboard/incidents">
               Ver todas <ChevronRight className="h-3.5 w-3.5" />
             </Link>
@@ -298,7 +325,7 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <div className="px-5 py-4 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-4 py-2">
                 <Skeleton className="h-3 w-10" />
@@ -308,9 +335,9 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : recent.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sin incidencias registradas.</p>
+          <p className="px-5 py-8 text-sm text-muted-foreground text-center">Sin incidencias registradas.</p>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y px-5">
             {recent.map((inc) => {
               const sc = STATUS_CFG[inc.status as keyof typeof STATUS_CFG]
               const folio = inc.number != null ? `#${String(inc.number).padStart(3, "0")}` : "—"
@@ -344,17 +371,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Acción principal ── */}
-      {isSupervisor && (
-        <div>
-          <Button asChild size="sm" className="gap-2">
-            <Link href="/dashboard/incidents">
-              <Plus className="h-4 w-4" />
-              Nueva incidencia
-            </Link>
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

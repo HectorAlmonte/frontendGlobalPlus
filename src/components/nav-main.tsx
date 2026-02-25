@@ -68,7 +68,7 @@ export function NavMain({
                     <ChevronRight className="ml-auto size-4 shrink-0 text-muted-foreground/50 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
+                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
                   <SidebarMenuSub>
                     {item.items?.map((subItem) => {
                       const isActive = pathname === subItem.url || pathname.startsWith(subItem.url + "/")

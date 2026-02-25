@@ -39,7 +39,6 @@ export function ChartRadialStacked() {
     }
 
     const onConnect = () => {
-      console.log("✅ Socket conectado:", s.id)
       fetchPatios() // 👈 ahora sí: el emit te va a caer
     }
 

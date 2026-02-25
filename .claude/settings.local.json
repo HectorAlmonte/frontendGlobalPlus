@@ -16,7 +16,12 @@
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(git commit:*)",
-      "Bash(cd \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\" && npx shadcn@latest add radio-group progress --yes 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus\" && npx shadcn@latest add radio-group progress --yes 2>&1)",
+      "Bash(head:*)",
+      "Bash(cd:*)",
+      "Bash(cd C:\\\\Users\\\\Hector\\\\Documents\\\\GitHub\\\\frontendGlobalPlus:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)"
     ]
   }
 }

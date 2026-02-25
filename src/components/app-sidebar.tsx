@@ -134,11 +134,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const isCollapsed = state === "collapsed";
 
+  const [navKey, setNavKey] = React.useState(0);
   const [nav, setNav] = React.useState<any[]>([]);
   const [loadingNav, setLoadingNav] = React.useState(true);
   const [navError, setNavError] = React.useState<string | null>(null);
 
   const retryRef = React.useRef(0);
+  const navInitializedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    function onNavRefresh() { setNavKey((k) => k + 1); }
+    window.addEventListener("nav:refresh", onNavRefresh);
+    return () => window.removeEventListener("nav:refresh", onNavRefresh);
+  }, []);
 
   const resolveIcon = (iconName?: string | null) => {
     if (!iconName) return undefined;
@@ -155,6 +163,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (loadingUser) return;
 
     if (!user) {
+      navInitializedRef.current = false;
       setNav([]);
       setNavError("No hay usuario cargado.");
       setLoadingNav(false);
@@ -173,7 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     const run = async () => {
       try {
-        setLoadingNav(true);
+        if (!navInitializedRef.current) setLoadingNav(true);
         setNavError(null);
 
         const url = `${API}/api/navigation/sidebar`;
@@ -218,13 +227,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
 
         setNav(nonEmpty);
+        navInitializedRef.current = true;
         retryRef.current = 0;
       } catch (e: any) {
         if (e?.name === "AbortError") {
           if (retryRef.current < 1) {
             retryRef.current += 1;
             setNavError(null);
-            setLoadingNav(true);
+            if (!navInitializedRef.current) setLoadingNav(true);
 
             clearTimeout(timeout);
             controller.abort();
@@ -261,6 +271,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   }
 
                   setNav(nonEmpty);
+                  navInitializedRef.current = true;
                   retryRef.current = 0;
                 })
                 .catch((err2) => {
@@ -292,7 +303,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [API, loadingUser, user]);
+  }, [API, loadingUser, user, navKey]);
 
   if (loadingUser) return null;
 
