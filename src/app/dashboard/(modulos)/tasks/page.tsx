@@ -13,6 +13,7 @@ import { Plus, BarChart3, ClipboardList } from "lucide-react";
 
 import type { TaskRow, TaskStats, TaskPeriod } from "./_lib/types";
 import { apiGetTaskStats } from "./_lib/api";
+import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 
 const PERIOD_OPTIONS: { value: TaskPeriod; label: string }[] = [
   { value: "7d", label: "7D" },
@@ -61,6 +62,8 @@ export default function TasksPage() {
     setEditing(null);
     setShowForm(true);
   };
+
+  useModuleShortcuts({ onNew: openCreate });
 
   const openEdit = (t: TaskRow) => {
     setEditing(t);

@@ -22,6 +22,7 @@ import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 
 import type { IncidentListItem, IncidentStatus } from "../_lib/types";
 import { statusBadge, priorityBadge } from "../_lib/utils";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 /* -- Helpers -- */
 const formatFolio = (num?: number) => {
@@ -74,7 +75,7 @@ export default function IncidentsTable({
 }: Props) {
   /* -- Pagination -- */
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistedState("incidents:pageSize", 10);
 
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const paginatedRows = useMemo(
@@ -145,6 +146,7 @@ export default function IncidentsTable({
               onChange={(e) => onFiltersChange({ ...filters, q: e.target.value })}
               placeholder="Buscar por título, área, tipo..."
               className="pl-8 h-9 w-full"
+              data-search-input
             />
           </div>
 

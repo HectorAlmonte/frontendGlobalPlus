@@ -21,13 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, ChevronLeft, ChevronRight, Plus, Wrench, UserCheck, RotateCcw, Cpu, Search, AlertCircle, RefreshCw } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, Plus, Wrench, UserCheck, RotateCcw, Cpu, Search, AlertCircle, RefreshCw, X } from "lucide-react";
 import { apiListUnits } from "../_lib/api";
 import type { StorageUnit, EquipmentStatus } from "../_lib/types";
 import { EquipmentStatusBadge, ConditionBadge, fmtDate, employeeName } from "../_lib/utils";
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
 import AssignUnitDialog from "./AssignUnitDialog";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 import ReturnUnitDialog from "./ReturnUnitDialog";
 import MaintenanceDialog from "./MaintenanceDialog";
 import CreateUnitDialog from "./CreateUnitDialog";
@@ -48,11 +50,16 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
     hasRole(user, "SUPERVISOR") ||
     hasRole(user, "SEGURIDAD");
 
+  useModuleShortcuts({
+    onNew: canManage ? () => setCreateOpen(true) : undefined,
+    searchSelector: `[data-search-input-units="${productId}"]`,
+  });
+
   const [units, setUnits] = useState<StorageUnit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<EquipmentStatus | "ALL">("ALL");
-  const [q, setQ] = useState("");
+  const [filterStatus, setFilterStatus] = usePersistedState<EquipmentStatus | "ALL">(`storage-units:${productId}:status`, "ALL");
+  const [q, setQ] = usePersistedState(`storage-units:${productId}:q`, "");
 
   const [createOpen, setCreateOpen] = useState(false);
   const [assignUnit, setAssignUnit] = useState<StorageUnit | null>(null);
@@ -123,8 +130,20 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
               onChange={(e) => setQ(e.target.value)}
               placeholder="Asset code / serie..."
               className="pl-8 h-9 w-full"
+              data-search-input-units={productId}
             />
           </div>
+          {(q !== "" || filterStatus !== "ALL") && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setQ(""); setFilterStatus("ALL"); }}
+              className="h-9 gap-1 text-muted-foreground shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpiar
+            </Button>
+          )}
           <Select
             value={filterStatus}
             onValueChange={(v) => setFilterStatus(v as EquipmentStatus | "ALL")}

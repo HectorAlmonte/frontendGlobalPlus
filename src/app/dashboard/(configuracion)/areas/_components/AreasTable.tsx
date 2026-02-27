@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, RefreshCw, AlertCircle, MapPin } from "lucide-react";
+import { MoreHorizontal, RefreshCw, AlertCircle, MapPin, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -25,15 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
 import type { AreaRow } from "../_lib/types";
 import {
   apiListAreas,
@@ -41,6 +32,8 @@ import {
   apiSoftDeleteArea,
   apiRestoreArea,
 } from "../_lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import DestructiveDialog from "@/components/shared/DestructiveDialog";
 
 type Props = {
   refreshKey: number;
@@ -55,9 +48,9 @@ export default function AreasTable({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const [q, setQ] = useState("");
-  const [activeOnly, setActiveOnly] = useState(false);
-  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [q, setQ] = usePersistedState("areas:q", "");
+  const [activeOnly, setActiveOnly] = usePersistedState("areas:activeOnly", false);
+  const [includeDeleted, setIncludeDeleted] = usePersistedState("areas:includeDeleted", false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selected, setSelected] = useState<AreaRow | null>(null);
@@ -65,7 +58,7 @@ export default function AreasTable({
 
   /* ── Paginación ── */
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistedState("areas:pageSize", 10);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const paginatedRows = useMemo(
@@ -147,6 +140,15 @@ export default function AreasTable({
     }
   };
 
+  const hasActiveFilters = q !== "" || activeOnly || includeDeleted;
+
+  const clearFilters = () => {
+    setQ("");
+    setActiveOnly(false);
+    setIncludeDeleted(false);
+    setPageIndex(0);
+  };
+
   return (
     <div className="space-y-3">
       {/* ── Filtros ── */}
@@ -156,6 +158,7 @@ export default function AreasTable({
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar por nombre o código..."
           className="w-full sm:w-[320px]"
+          data-search-input
         />
 
         <div className="flex items-center gap-2">
@@ -174,6 +177,18 @@ export default function AreasTable({
           >
             {includeDeleted ? "Con eliminadas" : "Sin eliminadas"}
           </Button>
+
+          {hasActiveFilters && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearFilters}
+              className="gap-1 text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpiar
+            </Button>
+          )}
 
           <Button
             size="sm"
@@ -390,31 +405,14 @@ export default function AreasTable({
         </div>
       </div>
 
-      {/* ── Diálogo de confirmación ── */}
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar área</DialogTitle>
-            <DialogDescription>
-              Se marcará como eliminada (baja lógica). Si tiene sub-áreas o
-              incidencias asociadas, el servidor lo bloqueará.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={doDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Eliminando..." : "Eliminar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DestructiveDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Eliminar área"
+        description="Se marcará como eliminada (baja lógica). Si tiene sub-áreas o incidencias asociadas, el servidor lo bloqueará."
+        onConfirm={doDelete}
+        loading={deleting}
+      />
     </div>
   );
 }

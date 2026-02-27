@@ -17,6 +17,8 @@ import EditIncidentDialog from "./_components/EditIncidentDialog";
 import EditCorrectiveDialog from "./_components/EditCorrectiveDialog";
 import EditClosureDialog from "./_components/EditClosureDialog";
 import SubtasksReportView from "./_components/SubtasksReportView";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 
 import type {
   CreateIncidentInput,
@@ -70,6 +72,8 @@ export default function IncidentsPage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  useModuleShortcuts({ onNew: () => setOpenCreate(true) });
+
   const [correctiveOpen, setCorrectiveOpen] = useState(false);
   const [correctiveIncidentId, setCorrectiveIncidentId] = useState<string | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -84,13 +88,34 @@ export default function IncidentsPage() {
   // Analytics period (independent from table)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<IncidentPeriod>("all");
 
-  // Table filters
-  const [tableFilters, setTableFilters] = useState<{
+  // Table filters — q and status are persisted; dates are session-only
+  type TableFilters = {
     q: string;
     status: IncidentStatus | "ALL";
     dateFrom?: Date;
     dateTo?: Date;
-  }>({ q: "", status: "ALL" });
+  };
+
+  const [filterQ, setFilterQ] = usePersistedState("incidents:q", "");
+  const [filterStatus, setFilterStatus] = usePersistedState<IncidentStatus | "ALL">("incidents:status", "ALL");
+  const [filterDateFrom, setFilterDateFrom] = useState<Date | undefined>();
+  const [filterDateTo, setFilterDateTo] = useState<Date | undefined>();
+
+  const tableFilters: TableFilters = useMemo(
+    () => ({ q: filterQ, status: filterStatus, dateFrom: filterDateFrom, dateTo: filterDateTo }),
+    [filterQ, filterStatus, filterDateFrom, filterDateTo]
+  );
+
+  const setTableFilters = useCallback(
+    (f: TableFilters) => {
+      setFilterQ(f.q);
+      setFilterStatus(f.status);
+      setFilterDateFrom(f.dateFrom);
+      setFilterDateTo(f.dateTo);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   // Leer filtro de status desde URL (?status=OPEN|IN_PROGRESS|CLOSED) al montar
   const didReadUrlFilter = useRef(false);
@@ -100,8 +125,9 @@ export default function IncidentsPage() {
     const params = new URLSearchParams(window.location.search);
     const s = params.get("status");
     if (s === "OPEN" || s === "IN_PROGRESS" || s === "CLOSED") {
-      setTableFilters((prev) => ({ ...prev, status: s }));
+      setFilterStatus(s as IncidentStatus);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Analytics toggle
@@ -158,12 +184,8 @@ export default function IncidentsPage() {
     setError(false);
     try {
       const data = await apiListIncidents({
-        dateFrom: tableFilters.dateFrom
-          ? tableFilters.dateFrom.toISOString()
-          : undefined,
-        dateTo: tableFilters.dateTo
-          ? tableFilters.dateTo.toISOString()
-          : undefined,
+        dateFrom: filterDateFrom ? filterDateFrom.toISOString() : undefined,
+        dateTo: filterDateTo ? filterDateTo.toISOString() : undefined,
       });
       setItems(data);
     } catch (e: any) {
@@ -172,7 +194,7 @@ export default function IncidentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [tableFilters.dateFrom, tableFilters.dateTo]);
+  }, [filterDateFrom, filterDateTo]);
 
   const fetchDetail = useCallback(async (id: string) => {
     setDetailLoading(true);

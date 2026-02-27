@@ -46,6 +46,7 @@ import {
   Search,
   RefreshCw,
   Package,
+  X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,8 @@ import { KindBadge } from "../_lib/utils";
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
 import ProductDialog from "./ProductDialog";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 
 interface Props {
   refreshKey?: number;
@@ -73,17 +76,21 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
   const canEdit = hasRole(user, "ADMIN") || hasRole(user, "SUPERVISOR");
   const canDelete = hasRole(user, "ADMIN");
 
+  useModuleShortcuts({
+    onNew: canEdit ? () => setCreateOpen(true) : undefined,
+  });
+
   const [items, setItems] = useState<StorageProduct[]>([]);
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
   // Filters
-  const [q, setQ] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
-  const [filterKind, setFilterKind] = useState("ALL");
-  const [filterCat, setFilterCat] = useState("ALL");
-  const [onlyLowStock, setOnlyLowStock] = useState(false);
+  const [q, setQ] = usePersistedState("storage-products:q", "");
+  const [debouncedQ, setDebouncedQ] = useState(q);
+  const [filterKind, setFilterKind] = usePersistedState("storage-products:kind", "ALL");
+  const [filterCat, setFilterCat] = usePersistedState("storage-products:cat", "ALL");
+  const [onlyLowStock, setOnlyLowStock] = usePersistedState("storage-products:lowStock", false);
 
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
@@ -191,8 +198,20 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar nombre o código..."
               className="pl-8 h-9 w-full"
+              data-search-input
             />
           </div>
+          {(q !== "" || filterKind !== "ALL" || filterCat !== "ALL" || onlyLowStock) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setQ(""); setFilterKind("ALL"); setFilterCat("ALL"); setOnlyLowStock(false); }}
+              className="h-9 gap-1 text-muted-foreground shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpiar
+            </Button>
+          )}
           <Select value={filterCat} onValueChange={setFilterCat}>
             <SelectTrigger className="w-full sm:w-40 h-9">
               <SelectValue placeholder="Categoría" />

@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, RefreshCw, AlertCircle, Layers } from "lucide-react";
+import { MoreHorizontal, RefreshCw, AlertCircle, Layers, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -24,14 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 import type { WorkAreaRow } from "../_lib/types";
 import {
@@ -39,6 +31,8 @@ import {
   apiToggleWorkArea,
   apiDeleteWorkArea,
 } from "../_lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import DestructiveDialog from "@/components/shared/DestructiveDialog";
 
 type Props = {
   refreshKey: number;
@@ -53,7 +47,7 @@ export default function WorkAreasTable({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const [q, setQ] = useState("");
+  const [q, setQ] = usePersistedState("work-areas:q", "");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selected, setSelected] = useState<WorkAreaRow | null>(null);
@@ -61,7 +55,7 @@ export default function WorkAreasTable({
 
   /* ── Paginación ── */
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistedState("work-areas:pageSize", 10);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const paginatedRows = useMemo(
@@ -128,6 +122,13 @@ export default function WorkAreasTable({
     }
   };
 
+  const hasActiveFilters = q !== "";
+
+  const clearFilters = () => {
+    setQ("");
+    setPageIndex(0);
+  };
+
   return (
     <div className="space-y-3">
       {/* ── Filtros ── */}
@@ -137,16 +138,30 @@ export default function WorkAreasTable({
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar por nombre o código..."
           className="w-full sm:w-[320px]"
+          data-search-input
         />
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={load}
-          disabled={loading}
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearFilters}
+              className="gap-1 text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpiar
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={load}
+            disabled={loading}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -327,31 +342,14 @@ export default function WorkAreasTable({
         </div>
       </div>
 
-      {/* ── Diálogo de confirmación ── */}
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar área de trabajo</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de eliminar el área de trabajo &quot;{selected?.name}&quot;?
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={doDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Eliminando..." : "Eliminar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DestructiveDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Eliminar área de trabajo"
+        description={`¿Estás seguro de eliminar el área de trabajo "${selected?.name}"? Esta acción no se puede deshacer.`}
+        onConfirm={doDelete}
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
 } from "./_lib/api";
 
 import { useWord } from "@/context/AppContext";
+import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 
 export default function DocumentsPage() {
   const { user, loadingUser } = useWord();
@@ -48,6 +49,8 @@ export default function DocumentsPage() {
 
   const [openCreate, setOpenCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  useModuleShortcuts({ onNew: isAdmin ? () => setOpenCreate(true) : undefined });
 
   /* ── Loaders ── */
   const fetchList = useCallback(async () => {

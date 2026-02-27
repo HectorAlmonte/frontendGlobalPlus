@@ -14,11 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Search, RefreshCw, Download, AlertCircle } from "lucide-react";
+import { FileText, Search, RefreshCw, Download, AlertCircle, X } from "lucide-react";
 import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 
 import type { DocumentRow, DocumentType } from "../_lib/types";
 import { statusBadge, formatDate, moduleKeyLabel } from "../_lib/utils";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 type Props = {
   items: DocumentRow[];
@@ -37,13 +38,13 @@ export default function DocumentsTable({
   onRefresh,
   documentTypes,
 }: Props) {
-  const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "VIGENTE" | "EXPIRADO">("ALL");
+  const [q, setQ] = usePersistedState("documents:q", "");
+  const [typeFilter, setTypeFilter] = usePersistedState("documents:type", "ALL");
+  const [statusFilter, setStatusFilter] = usePersistedState<"ALL" | "VIGENTE" | "EXPIRADO">("documents:status", "ALL");
 
   /* -- Pagination -- */
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistedState("documents:pageSize", 10);
 
   const filtered = useMemo(() => {
     let out = items;
@@ -83,6 +84,15 @@ export default function DocumentsTable({
   );
 
   useEffect(() => { setPageIndex(0); }, [filtered.length, pageSize]);
+
+  const hasActiveFilters = q !== "" || typeFilter !== "ALL" || statusFilter !== "ALL";
+
+  const clearFilters = () => {
+    setQ("");
+    setTypeFilter("ALL");
+    setStatusFilter("ALL");
+    setPageIndex(0);
+  };
 
   function handleExport() {
     const rows = filtered.map((doc) => ({
@@ -129,6 +139,7 @@ export default function DocumentsTable({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar nombre, código, área..."
               className="pl-8 h-9 w-full"
+              data-search-input
             />
           </div>
 
@@ -154,6 +165,13 @@ export default function DocumentsTable({
               <SelectItem value="EXPIRADO">Expirado</SelectItem>
             </SelectContent>
           </Select>
+
+          {hasActiveFilters && (
+            <Button size="sm" variant="ghost" onClick={clearFilters} className="h-9 gap-1 text-muted-foreground shrink-0">
+              <X className="h-3.5 w-3.5" />
+              Limpiar
+            </Button>
+          )}
 
           <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleExport} disabled={loading || filtered.length === 0} title="Exportar a Excel">
             <Download className="h-4 w-4" />

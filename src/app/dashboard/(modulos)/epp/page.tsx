@@ -34,6 +34,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 import { EppStatsCards } from "./_components/EppStatsCards";
 import { EppCreateForm } from "./_components/EppCreateForm";
 import { EppDetailSheet } from "./_components/EppDetailSheet";
@@ -52,6 +54,10 @@ export default function EppPage() {
 
   const [activeTab, setActiveTab] = useState("historial");
 
+  useModuleShortcuts({
+    onNew: canCreate ? () => setActiveTab("nueva") : undefined,
+  });
+
   const [stats, setStats] = useState<EppStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -60,8 +66,8 @@ export default function EppPage() {
   const [tableLoading, setTableLoading] = useState(true);
   const [tableError, setTableError] = useState(false);
 
-  const [search, setSearch] = useState("");
-  const [reasonFilter, setReasonFilter] = useState<string>("ALL");
+  const [search, setSearch] = usePersistedState("epp:search", "");
+  const [reasonFilter, setReasonFilter] = usePersistedState("epp:reason", "ALL");
   const [page, setPage] = useState(1);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -167,6 +173,7 @@ export default function EppPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-8 h-9 w-full"
+                    data-search-input
                   />
                 </div>
                 <Select value={reasonFilter} onValueChange={setReasonFilter}>

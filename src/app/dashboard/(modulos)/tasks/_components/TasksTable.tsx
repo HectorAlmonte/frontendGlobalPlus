@@ -17,14 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -37,6 +29,8 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 import type { TaskRow, TaskStatus, TaskPriority } from "../_lib/types";
 import { apiListTasks, apiDeleteTask, apiRestoreTask, apiSearchWorkAreas } from "../_lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
+import DestructiveDialog from "@/components/shared/DestructiveDialog";
 
 /* ── Helpers de presentación ── */
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -95,10 +89,10 @@ export default function TasksTable({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
-  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "ALL">("ALL");
-  const [workAreaFilter, setWorkAreaFilter] = useState("");
+  const [q, setQ] = usePersistedState("tasks:q", "");
+  const [statusFilter, setStatusFilter] = usePersistedState<TaskStatus | "ALL">("tasks:status", "ALL");
+  const [priorityFilter, setPriorityFilter] = usePersistedState<TaskPriority | "ALL">("tasks:priority", "ALL");
+  const [workAreaFilter, setWorkAreaFilter] = usePersistedState("tasks:workArea", "");
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
@@ -109,7 +103,7 @@ export default function TasksTable({
 
   /* ── Paginación ── */
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistedState("tasks:pageSize", 10);
 
   // Client-side filtering for dates as fallback
   const filteredRows = useMemo(() => {
@@ -214,6 +208,7 @@ export default function TasksTable({
     setIncludeDeleted(false);
     setDateFrom(undefined);
     setDateTo(undefined);
+    setPageIndex(0);
   };
 
   return (
@@ -226,6 +221,7 @@ export default function TasksTable({
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por título..."
             className="w-full sm:w-[260px]"
+            data-search-input
           />
         </div>
 
@@ -538,25 +534,14 @@ export default function TasksTable({
         </div>
       </div>
 
-      {/* ── Diálogo de confirmación ── */}
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar tarea</DialogTitle>
-            <DialogDescription>
-              Se marcará como eliminada (baja lógica). Podrás restaurarla después.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={doDelete} disabled={deleting}>
-              {deleting ? "Eliminando..." : "Eliminar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DestructiveDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Eliminar tarea"
+        description="Se marcará como eliminada (baja lógica). Podrás restaurarla después."
+        onConfirm={doDelete}
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterPopover } from "@/components/filter-popover";
-import { MoreHorizontal, Copy, Check, RefreshCw, Download, AlertCircle, Users } from "lucide-react";
+import { MoreHorizontal, Copy, Check, RefreshCw, Download, AlertCircle, Users, X } from "lucide-react";
 import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ import {
   apiResetPassword,
   apiListRolesForSelect,
 } from "../_lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 type Props = {
   refreshKey: number;
@@ -57,10 +58,10 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
   const [error, setError] = useState(false);
 
   /* ── Filtros ── */
-  const [q, setQ] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [accountFilter, setAccountFilter] = useState<AccountFilter>("ALL");
+  const [q, setQ] = usePersistedState("staff:q", "");
+  const [roleFilter, setRoleFilter] = usePersistedState("staff:role", "");
+  const [statusFilter, setStatusFilter] = usePersistedState<StatusFilter>("staff:status", "ALL");
+  const [accountFilter, setAccountFilter] = usePersistedState<AccountFilter>("staff:account", "ALL");
   const [rolesOptions, setRolesOptions] = useState<{ value: string; label: string }[]>([]);
 
   /* ── Confirm dialogs ── */
@@ -78,7 +79,7 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
 
   /* ── Paginación ── */
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = usePersistedState("staff:pageSize", 10);
 
   /* ── Filtrado client-side ── */
   const filtered = useMemo(() => {
@@ -180,6 +181,7 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
     setRoleFilter("");
     setStatusFilter("ALL");
     setAccountFilter("ALL");
+    setPageIndex(0);
   };
 
   /* ── Acciones ── */
@@ -249,12 +251,26 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
     <div className="space-y-3">
       {/* ── Filtros ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por DNI, nombre, email, cargo..."
-          className="w-full sm:w-[360px]"
-        />
+        <div className="flex items-center gap-2 flex-1">
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por DNI, nombre, email, cargo..."
+            className="w-full sm:w-[360px]"
+            data-search-input
+          />
+          {(q !== "" || activeFilterCount > 0) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setQ(""); clearFilters(); }}
+              className="gap-1 text-muted-foreground shrink-0"
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpiar
+            </Button>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           <FilterPopover activeCount={activeFilterCount} onClear={clearFilters}>
