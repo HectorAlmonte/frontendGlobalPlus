@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, ListChecks, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
 
 import IncidentsTable from "./_components/IncidentsTable";
 import IncidentDetailSheet from "./_components/IncidentDetailSheet";
@@ -59,6 +60,7 @@ const PERIOD_OPTIONS: { value: IncidentPeriod; label: string }[] = [
 export default function IncidentsPage() {
   const [items, setItems] = useState<IncidentListItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const [openSheet, setOpenSheet] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -153,6 +155,7 @@ export default function IncidentsPage() {
   // =========================
   const fetchList = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await apiListIncidents({
         dateFrom: tableFilters.dateFrom
@@ -163,8 +166,9 @@ export default function IncidentsPage() {
           : undefined,
       });
       setItems(data);
-    } catch (e) {
-      console.error("Error al listar:", e);
+    } catch (e: any) {
+      setError(true);
+      toast.error(e?.message || "Error al cargar incidencias");
     } finally {
       setLoading(false);
     }
@@ -382,6 +386,7 @@ export default function IncidentsPage() {
         <TabsContent value="listado">
           <IncidentsTable
             loading={loading}
+            error={error}
             items={filtered}
             filters={tableFilters}
             onFiltersChange={setTableFilters}

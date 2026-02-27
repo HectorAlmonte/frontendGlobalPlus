@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus, TrendingDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, TrendingDown, AlertCircle, RefreshCw } from "lucide-react";
 import { apiListMovements } from "../_lib/api";
 import type { StockMovement } from "../_lib/types";
 import {
@@ -40,17 +40,20 @@ export default function MovementsTable({ productId, productName, refreshKey }: P
 
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [movOpen, setMovOpen] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const pageSize = 10;
 
   const fetchMovements = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await apiListMovements(productId);
       setMovements(data);
       setPageIndex(0);
     } catch {
+      setError(true);
       toast.error("Error al cargar movimientos");
     } finally {
       setLoading(false);
@@ -115,10 +118,34 @@ export default function MovementsTable({ productId, productName, refreshKey }: P
                   <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
                 </TableRow>
               ))
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Error al cargar los movimientos</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={fetchMovements} className="gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Reintentar
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : paginatedRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                  Sin movimientos registrados
+                <TableCell colSpan={6} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <TrendingDown className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Sin movimientos</p>
+                    <p className="text-xs text-muted-foreground">No se han registrado movimientos de stock aún</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

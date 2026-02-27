@@ -28,16 +28,12 @@ type IncidentStats = {
   avgCloseDays: number
 }
 
-type EppStats = { total: number; unsigned: number; thisMonth: number }
-
-type StorageStats = {
-  totalActiveProducts: number
-  criticalStockCount: number
-  lowStockCount: number
-  equipmentSummary: { available: number; assigned: number; inMaintenance: number }
+type DashboardStats = {
+  incidents: { open: number; inProgress: number; overdue: number }
+  tasks:     { pending: number; inProgress: number; overdue: number }
+  epp:       { unsigned: number; last30Days: number }
+  storage:   { criticalStock: number; lowStock: number }
 }
-
-type TaskStats = { total: number; overdue: number; completionRate: number }
 
 type RecentIncident = {
   id: string
@@ -57,23 +53,9 @@ async function fetchStats(): Promise<IncidentStats | null> {
   } catch { return null }
 }
 
-async function fetchEppStats(): Promise<EppStats | null> {
+async function fetchDashboardStats(): Promise<DashboardStats | null> {
   try {
-    const r = await fetch(`${API}/api/epp/stats`, { credentials: "include", cache: "no-store" })
-    return r.ok ? r.json() : null
-  } catch { return null }
-}
-
-async function fetchStorageStats(): Promise<StorageStats | null> {
-  try {
-    const r = await fetch(`${API}/api/storage/stats`, { credentials: "include", cache: "no-store" })
-    return r.ok ? r.json() : null
-  } catch { return null }
-}
-
-async function fetchTaskStats(): Promise<TaskStats | null> {
-  try {
-    const r = await fetch(`${API}/api/tasks/stats`, { credentials: "include", cache: "no-store" })
+    const r = await fetch(`${API}/api/dashboard/stats`, { credentials: "include", cache: "no-store" })
     return r.ok ? r.json() : null
   } catch { return null }
 }
@@ -128,21 +110,17 @@ function firstName(user: any) {
 export default function DashboardPage() {
   const { setWord, user } = useWord()
   const [stats, setStats] = useState<IncidentStats | null>(null)
-  const [eppStats, setEppStats] = useState<EppStats | null>(null)
-  const [storageStats, setStorageStats] = useState<StorageStats | null>(null)
-  const [taskStats, setTaskStats] = useState<TaskStats | null>(null)
+  const [dashStats, setDashStats] = useState<DashboardStats | null>(null)
   const [recent, setRecent] = useState<RecentIncident[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { setWord("Dashboard") }, [setWord])
 
   useEffect(() => {
-    Promise.all([fetchStats(), fetchEppStats(), fetchStorageStats(), fetchTaskStats(), fetchRecent()])
-      .then(([s, epp, storage, tasks, r]) => {
+    Promise.all([fetchStats(), fetchDashboardStats(), fetchRecent()])
+      .then(([s, dash, r]) => {
         setStats(s)
-        setEppStats(epp)
-        setStorageStats(storage)
-        setTaskStats(tasks)
+        setDashStats(dash)
         setRecent(r)
       })
       .finally(() => setLoading(false))
@@ -154,10 +132,6 @@ export default function DashboardPage() {
   const resolutionPct = stats
     ? Math.min(100, Math.round(stats.resolutionRate > 1 ? stats.resolutionRate : stats.resolutionRate * 100))
     : 0
-  const taskCompletionPct = taskStats
-    ? Math.min(100, Math.round(taskStats.completionRate > 1 ? taskStats.completionRate : taskStats.completionRate * 100))
-    : 0
-  const storageAlerts = (storageStats?.criticalStockCount ?? 0) + (storageStats?.lowStockCount ?? 0)
 
   const typeChartData = useMemo(() => {
     if (!stats?.byType) return []
@@ -255,22 +229,18 @@ export default function DashboardPage() {
           </div>
           <div className="px-4 py-3 space-y-2">
             {loading ? (
-              <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
-            ) : eppStats ? (
+              <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
+            ) : dashStats?.epp ? (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total entregas</span>
-                  <span className="font-semibold tabular-nums">{eppStats.total}</span>
-                </div>
-                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Sin firma</span>
-                  <span className={`font-semibold tabular-nums ${eppStats.unsigned > 0 ? "text-amber-500" : "text-emerald-500"}`}>
-                    {eppStats.unsigned}
+                  <span className={`font-semibold tabular-nums ${dashStats.epp.unsigned > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                    {dashStats.epp.unsigned}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Este mes</span>
-                  <span className="font-semibold tabular-nums">{eppStats.thisMonth}</span>
+                  <span className="text-muted-foreground">Últimos 30 días</span>
+                  <span className="font-semibold tabular-nums">{dashStats.epp.last30Days}</span>
                 </div>
               </>
             ) : (
@@ -290,22 +260,20 @@ export default function DashboardPage() {
           </div>
           <div className="px-4 py-3 space-y-2">
             {loading ? (
-              <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
-            ) : storageStats ? (
+              <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
+            ) : dashStats?.storage ? (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Productos activos</span>
-                  <span className="font-semibold tabular-nums">{storageStats.totalActiveProducts}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Alertas de stock</span>
-                  <span className={`font-semibold tabular-nums ${storageAlerts > 0 ? "text-red-500" : "text-emerald-500"}`}>
-                    {storageAlerts}
+                  <span className="text-muted-foreground">Stock crítico (sin stock)</span>
+                  <span className={`font-semibold tabular-nums ${dashStats.storage.criticalStock > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                    {dashStats.storage.criticalStock}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Equipos disponibles</span>
-                  <span className="font-semibold tabular-nums">{storageStats.equipmentSummary.available}</span>
+                  <span className="text-muted-foreground">Stock bajo</span>
+                  <span className={`font-semibold tabular-nums ${dashStats.storage.lowStock > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                    {dashStats.storage.lowStock}
+                  </span>
                 </div>
               </>
             ) : (
@@ -326,21 +294,21 @@ export default function DashboardPage() {
           <div className="px-4 py-3 space-y-2">
             {loading ? (
               <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
-            ) : taskStats ? (
+            ) : dashStats?.tasks ? (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total tareas</span>
-                  <span className="font-semibold tabular-nums">{taskStats.total}</span>
+                  <span className="text-muted-foreground">Pendientes</span>
+                  <span className="font-semibold tabular-nums">{dashStats.tasks.pending}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">En progreso</span>
+                  <span className="font-semibold tabular-nums">{dashStats.tasks.inProgress}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Vencidas</span>
-                  <span className={`font-semibold tabular-nums ${taskStats.overdue > 0 ? "text-red-500" : "text-emerald-500"}`}>
-                    {taskStats.overdue}
+                  <span className={`font-semibold tabular-nums ${dashStats.tasks.overdue > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                    {dashStats.tasks.overdue}
                   </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">% Completadas</span>
-                  <span className="font-semibold tabular-nums">{taskCompletionPct}%</span>
                 </div>
               </>
             ) : (

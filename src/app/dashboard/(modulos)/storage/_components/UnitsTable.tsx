@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, ChevronLeft, ChevronRight, Plus, Wrench, UserCheck, RotateCcw, Cpu, Search } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, Plus, Wrench, UserCheck, RotateCcw, Cpu, Search, AlertCircle, RefreshCw } from "lucide-react";
 import { apiListUnits } from "../_lib/api";
 import type { StorageUnit, EquipmentStatus } from "../_lib/types";
 import { EquipmentStatusBadge, ConditionBadge, fmtDate, employeeName } from "../_lib/utils";
@@ -49,6 +50,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
 
   const [units, setUnits] = useState<StorageUnit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [filterStatus, setFilterStatus] = useState<EquipmentStatus | "ALL">("ALL");
   const [q, setQ] = useState("");
 
@@ -62,6 +64,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
 
   const fetchUnits = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await apiListUnits({
         productId,
@@ -71,6 +74,7 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
       setUnits(data);
       setPageIndex(0);
     } catch {
+      setError(true);
       toast.error("Error al cargar unidades");
     } finally {
       setLoading(false);
@@ -161,15 +165,41 @@ export default function UnitsTable({ productId, productName, refreshKey, onRefre
           </TableHeader>
           <TableBody>
             {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : error ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  Cargando...
+                <TableCell colSpan={7} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Error al cargar las unidades</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={fetchUnits} className="gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Reintentar
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : paginatedRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  Sin unidades registradas
+                <TableCell colSpan={7} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <Cpu className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Sin unidades registradas</p>
+                    <p className="text-xs text-muted-foreground">No se han creado unidades para este equipo aún</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

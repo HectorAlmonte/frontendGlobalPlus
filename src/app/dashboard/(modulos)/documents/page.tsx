@@ -37,6 +37,7 @@ export default function DocumentsPage() {
 
   const [items, setItems] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
 
@@ -51,10 +52,12 @@ export default function DocumentsPage() {
   /* ── Loaders ── */
   const fetchList = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await apiListDocuments();
       setItems(data);
     } catch (e: any) {
+      setError(true);
       toast.error(e?.message || "Error al listar documentos");
     } finally {
       setLoading(false);
@@ -193,6 +196,7 @@ export default function DocumentsPage() {
       {/* ===== TABLA ===== */}
       <DocumentsTable
         loading={loading}
+        error={error}
         items={items}
         documentTypes={documentTypes}
         onOpen={(id) => {

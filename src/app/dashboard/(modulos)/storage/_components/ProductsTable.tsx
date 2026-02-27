@@ -41,8 +41,11 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  AlertCircle,
   BookOpen,
   Search,
+  RefreshCw,
+  Package,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -73,6 +76,7 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
   const [items, setItems] = useState<StorageProduct[]>([]);
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   // Filters
   const [q, setQ] = useState("");
@@ -102,6 +106,7 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
 
   const fetchList = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await apiListProducts({
         q: debouncedQ || undefined,
@@ -112,6 +117,7 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
       setItems(data);
       setPageIndex(0);
     } catch {
+      setError(true);
       toast.error("Error al cargar productos");
     } finally {
       setLoading(false);
@@ -248,9 +254,35 @@ export default function ProductsTable({ refreshKey, onRefresh }: Props) {
                   <TableCell><Skeleton className="h-7 w-7 rounded ml-auto" /></TableCell>
                 </TableRow>
               ))
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Error al cargar los productos</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={fetchList} className="gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Reintentar
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : paginatedRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Sin productos</TableCell>
+                <TableCell colSpan={7} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <Package className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Sin productos</p>
+                    <p className="text-xs text-muted-foreground">No se encontraron productos con los filtros aplicados</p>
+                  </div>
+                </TableCell>
               </TableRow>
             ) : (
               paginatedRows.map((p) => (

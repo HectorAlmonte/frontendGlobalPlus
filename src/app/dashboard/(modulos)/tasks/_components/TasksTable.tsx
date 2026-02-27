@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { RefreshCw, MoreHorizontal } from "lucide-react";
+import { RefreshCw, MoreHorizontal, AlertCircle, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -93,6 +93,7 @@ export default function TasksTable({
 }: Props) {
   const [rows, setRows] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
@@ -142,6 +143,7 @@ export default function TasksTable({
   }, [q]);
 
   const load = async () => {
+    setError(false);
     try {
       setLoading(true);
       const data = await apiListTasks({
@@ -155,7 +157,7 @@ export default function TasksTable({
       });
       setRows(data);
     } catch (e: any) {
-      console.error(e);
+      setError(true);
       toast.error(e?.message || "Error cargando tareas");
     } finally {
       setLoading(false);
@@ -332,13 +334,36 @@ export default function TasksTable({
           </thead>
 
           <tbody>
-            {paginatedRows.length === 0 && (
+            {!loading && error && (
               <tr>
-                <td
-                  className="px-3 py-6 text-center text-muted-foreground"
-                  colSpan={9}
-                >
-                  {loading ? "Cargando..." : "Sin tareas"}
+                <td colSpan={9} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Error al cargar las tareas</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={load} className="gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Reintentar
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!loading && !error && paginatedRows.length === 0 && (
+              <tr>
+                <td colSpan={9} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <ClipboardList className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Sin tareas</p>
+                    <p className="text-xs text-muted-foreground">No se encontraron tareas con los filtros aplicados</p>
+                  </div>
                 </td>
               </tr>
             )}

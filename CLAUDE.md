@@ -34,29 +34,31 @@ npm run lint    # ESLint
 src/
 ├── app/
 │   ├── dashboard/
-│   │   ├── (modulos)/           # Route group — URL no cambia
-│   │   │   ├── incidents/       # /dashboard/incidents
-│   │   │   ├── storage/         # /dashboard/storage
-│   │   │   ├── documents/       # /dashboard/documents
-│   │   │   ├── epp/             # /dashboard/epp
-│   │   │   ├── tasks/           # /dashboard/tasks
-│   │   │   ├── ordenes/         # /dashboard/ordenes
-│   │   │   └── visitas/         # /dashboard/visitas
-│   │   ├── (configuracion)/     # Route group
-│   │   │   ├── areas/           # /dashboard/areas
-│   │   │   ├── work-areas/      # /dashboard/work-areas
-│   │   │   ├── staff/           # /dashboard/staff
-│   │   │   └── forms/           # /dashboard/forms/...
-│   │   ├── (admin)/             # Route group
+│   │   ├── (modulos)/                    # Route group — URL no cambia
+│   │   │   ├── incidents/                # /dashboard/incidents
+│   │   │   ├── storage/                  # /dashboard/storage (dashboard almacén)
+│   │   │   │   ├── products/             # /dashboard/storage/products (catálogo)
+│   │   │   │   │   └── [id]/             # /dashboard/storage/products/:id (detalle producto)
+│   │   │   │   └── units/
+│   │   │   │       └── [id]/             # /dashboard/storage/units/:id (detalle unidad)
+│   │   │   ├── documents/                # /dashboard/documents
+│   │   │   ├── epp/                      # /dashboard/epp
+│   │   │   └── tasks/                    # /dashboard/tasks
+│   │   ├── (configuracion)/              # Route group
+│   │   │   ├── areas/                    # /dashboard/areas
+│   │   │   ├── work-areas/               # /dashboard/work-areas
+│   │   │   ├── staff/                    # /dashboard/staff
+│   │   │   └── forms/
+│   │   │       └── roles/                # /dashboard/forms/roles
+│   │   ├── (admin)/                      # Route group
 │   │   │   └── admin/
-│   │   │       └── navigation/  # /dashboard/admin/navigation
-│   │   ├── (perfil)/            # Route group
-│   │   │   ├── me/              # /dashboard/me
-│   │   │   └── settings/        # /dashboard/settings/change-password
-│   │   ├── (seguridad)/         # Route group
-│   │   │   └── seguridad/       # /dashboard/seguridad
+│   │   │       └── navigation/           # /dashboard/admin/navigation
+│   │   ├── (perfil)/                     # Route group
+│   │   │   ├── me/                       # /dashboard/me
+│   │   │   └── settings/
+│   │   │       └── change-password/      # /dashboard/settings/change-password
 │   │   ├── layout.tsx
-│   │   └── page.tsx             # Dashboard principal
+│   │   └── page.tsx                      # Dashboard principal (KPIs multi-módulo)
 │   └── ...
 ├── components/
 │   ├── ui/                  # shadcn/ui components
@@ -182,6 +184,34 @@ El fetcher debe devolver `{ value: string; label: string }[]`.
 - `ROLES_WITH_ACCOUNT = ["ADMIN", "SUPERVISOR", "SEGURIDAD"]` — estos roles crean cuenta de usuario automáticamente. TRABAJADOR no crea cuenta.
 - Roles para el select: `GET /api/roles?active=1` → `{ id, name, key }[]`
 
+## Módulo de Almacén — detalles importantes
+
+- Páginas: `/dashboard/storage` (dashboard), `/dashboard/storage/products` (catálogo), `/dashboard/storage/products/[id]` (detalle), `/dashboard/storage/units/[id]` (detalle unidad)
+- Tipos de producto: `CONSUMABLE` (stock + movimientos) y `EQUIPMENT` (unidades + asignaciones)
+- Roles: ver=todos; registrar movimientos=ADMIN/SUPERVISOR/SEGURIDAD; editar catálogo=ADMIN/SUPERVISOR; eliminar/retirar=solo ADMIN
+- Socket.IO: escucha `storage:stock_alert` → toast sonner por nivel (`CRITICAL` / `LOW` / `CAUTION`)
+- QR: descarga blob desde `/api/storage/products/:id/qr` o `/api/storage/units/:id/qr`
+- Componentes shadcn requeridos: `radio-group`, `progress` (además de los estándar)
+
+## Módulo de EPP — detalles importantes
+
+- Página única `/dashboard/epp` — lista + sheet de creación + sheet de detalle
+- Paginación server-side vía `page`/`pageSize` query params
+- Firma digital: `signature_pad` npm (guion bajo, no guion), dynamic import en `useEffect`
+- `SignaturePadCanvas`: `forwardRef` con métodos `getDataURL()`, `clear()`, `isEmpty()`; resize resetea el canvas
+- Items: CONSUMABLE (productId + quantity) o EQUIPMENT (equipProductId → units → unitId seleccionada)
+- `EppProductCombobox`: Popover+Command, `onSelect(ProductOption)` devuelve datos completos del producto
+- Staff: cargado todo desde `/api/staff/search/all`, filtrado client-side, cacheado con `useRef`
+- Detalle: vista recibo → botón firmar → Dialog con pad → `PATCH /api/epp/deliveries/:id/sign`
+- Crear: roles ADMIN, SUPERVISOR, SEGURIDAD
+
+## Módulo de Tareas — detalles importantes
+
+- Página única `/dashboard/tasks` — KPIs + tabla + modal crear/editar + sheet de detalle
+- `TaskKpiDashboard`: stats por período (`7d`, `15d`, `1m`, `1y`, `all`)
+- `GET /api/tasks/stats?period=` → stats del período seleccionado
+- Detail sheet con secciones: info, asignados, subtareas/checklist
+
 ## Perfil de usuario (`/dashboard/me`)
 
 - Soporta multi-rol: lee `user.roles[]` con fallback a `user.role` (singular)
@@ -190,8 +220,11 @@ El fetcher debe devolver `{ value: string; label: string }[]`.
 
 ## Dashboard principal
 
-- Enfocado en incidencias (sistema SST)
-- Datos: `GET /api/incidents/stats` devuelve `{ total, byStatus, byType, byPriority, overdue, resolutionRate, avgCloseDays }`
+- KPIs multi-módulo: incidencias, EPP, almacén y tareas en una sola vista
+- `GET /api/incidents/stats` → `{ total, byStatus, byType, byPriority, overdue, resolutionRate, avgCloseDays }`
+- `GET /api/epp/stats` → `{ total, unsigned, thisMonth }`
+- `GET /api/storage/stats` → `{ totalActiveProducts, criticalStockCount, lowStockCount, equipmentSummary }`
+- `GET /api/tasks/stats` → `{ total, overdue, completionRate }`
 - Incidencias recientes: `GET /api/incidents` (primeras 5)
 - Banner de alerta si hay incidencias con status OPEN
 

@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterPopover } from "@/components/filter-popover";
-import { MoreHorizontal, Copy, Check, RefreshCw, Download } from "lucide-react";
+import { MoreHorizontal, Copy, Check, RefreshCw, Download, AlertCircle, Users } from "lucide-react";
 import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 import { toast } from "sonner";
 
@@ -54,6 +54,7 @@ type AccountFilter = "ALL" | "con_cuenta" | "sin_cuenta" | "activa" | "inactiva"
 export default function StaffTable({ refreshKey, onEditClick }: Props) {
   const [rows, setRows] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   /* ── Filtros ── */
   const [q, setQ] = useState("");
@@ -144,12 +145,13 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
 
   /* ── Carga ── */
   const load = async () => {
+    setError(false);
     try {
       setLoading(true);
       const data = await apiListStaff();
       setRows(data);
     } catch (e: any) {
-      console.error(e);
+      setError(true);
       toast.error(e?.message || "Error cargando personal");
     } finally {
       setLoading(false);
@@ -368,10 +370,36 @@ export default function StaffTable({ refreshKey, onEditClick }: Props) {
               </tr>
             ))}
 
-            {!loading && paginatedRows.length === 0 && (
+            {!loading && error && (
               <tr>
-                <td className="px-3 py-6 text-center text-muted-foreground" colSpan={8}>
-                  Sin registros de personal
+                <td colSpan={8} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Error al cargar el personal</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={load} className="gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Reintentar
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!loading && !error && paginatedRows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <Users className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Sin personal registrado</p>
+                    <p className="text-xs text-muted-foreground">No se encontraron registros con los filtros aplicados</p>
+                  </div>
                 </td>
               </tr>
             )}

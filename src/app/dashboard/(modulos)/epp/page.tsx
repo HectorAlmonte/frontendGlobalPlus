@@ -8,7 +8,10 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +58,7 @@ export default function EppPage() {
   const [rows, setRows] = useState<EppDeliveryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [tableLoading, setTableLoading] = useState(true);
+  const [tableError, setTableError] = useState(false);
 
   const [search, setSearch] = useState("");
   const [reasonFilter, setReasonFilter] = useState<string>("ALL");
@@ -77,6 +81,7 @@ export default function EppPage() {
   // Load deliveries — un solo effect, se dispara ante cualquier cambio
   useEffect(() => {
     setTableLoading(true);
+    setTableError(false);
     const params: Record<string, string | number> = {
       page,
       pageSize: PAGE_SIZE,
@@ -89,7 +94,10 @@ export default function EppPage() {
         setRows(res.data);
         setTotal(res.total);
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        setTableError(true);
+        toast.error(e?.message || "Error al cargar las entregas");
+      })
       .finally(() => setTableLoading(false));
   }, [page, search, reasonFilter, refreshKey]);
 
@@ -210,13 +218,37 @@ export default function EppPage() {
                         ))}
                       </TableRow>
                     ))
+                  ) : tableError ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                            <AlertCircle className="h-6 w-6 text-destructive" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Error al cargar las entregas</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                          </div>
+                          <button
+                            onClick={() => setRefreshKey((k) => k + 1)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            Reintentar
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center text-muted-foreground py-12"
-                      >
-                        No se encontraron entregas
+                      <TableCell colSpan={7} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                            <ShieldCheck className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm font-medium">Sin entregas registradas</p>
+                          <p className="text-xs text-muted-foreground">No se encontraron entregas con los filtros aplicados</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

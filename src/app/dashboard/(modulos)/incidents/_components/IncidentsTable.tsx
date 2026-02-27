@@ -17,7 +17,7 @@ import {
 
 import { FilterPopover } from "@/components/filter-popover";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { ClipboardList, Search, RefreshCw, Download } from "lucide-react";
+import { ClipboardList, Search, RefreshCw, Download, AlertCircle } from "lucide-react";
 import { downloadXlsx, todayStr } from "@/lib/exportExcel";
 
 import type { IncidentListItem, IncidentStatus } from "../_lib/types";
@@ -56,6 +56,7 @@ type Filters = {
 type Props = {
   items: IncidentListItem[];
   loading?: boolean;
+  error?: boolean;
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   onOpen: (id: string) => void;
@@ -65,6 +66,7 @@ type Props = {
 export default function IncidentsTable({
   items,
   loading,
+  error,
   filters,
   onFiltersChange,
   onOpen,
@@ -236,10 +238,36 @@ export default function IncidentsTable({
               </tr>
             ))}
 
-            {!loading && paginatedRows.length === 0 && (
+            {!loading && error && (
               <tr>
-                <td className="px-4 py-12 text-center text-muted-foreground" colSpan={10}>
-                  No hay incidencias para mostrar.
+                <td colSpan={10} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Error al cargar las incidencias</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No se pudo conectar con el servidor</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={onRefresh} className="gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Reintentar
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!loading && !error && paginatedRows.length === 0 && (
+              <tr>
+                <td colSpan={10} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <ClipboardList className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Sin incidencias</p>
+                    <p className="text-xs text-muted-foreground">No se encontraron resultados con los filtros aplicados</p>
+                  </div>
                 </td>
               </tr>
             )}
