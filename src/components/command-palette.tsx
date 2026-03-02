@@ -42,12 +42,15 @@ async function fetchNav(): Promise<NavSection[]> {
 }
 
 export function CommandPalette() {
+  const [mounted, setMounted] = useState(false)
   const [open, setOpen]       = useState(false)
   const [sections, setSections] = useState<NavSection[]>([])
   const [loading, setLoading] = useState(false)
   const loaded                = useRef(false)
   const router                = useRouter()
   const { user }              = useWord()
+
+  useEffect(() => { setMounted(true) }, [])
 
   // Atajo de teclado Ctrl+K / Cmd+K
   useEffect(() => {
@@ -78,6 +81,23 @@ export function CommandPalette() {
   }, [router])
 
   const hasFullAccess = !hasRole(user, "TRABAJADOR")
+
+  if (!mounted) {
+    return (
+      <>
+        <Button variant="outline" size="sm" className="h-8 gap-2 px-3 text-muted-foreground text-xs hidden sm:flex border-dashed">
+          <Search className="h-3.5 w-3.5" />
+          <span>Buscar...</span>
+          <kbd className="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-80">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 flex sm:hidden">
+          <Search className="h-4 w-4" />
+        </Button>
+      </>
+    )
+  }
 
   return (
     <>

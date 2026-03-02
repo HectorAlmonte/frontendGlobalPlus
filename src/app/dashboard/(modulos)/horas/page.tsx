@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Clock,
   AlertTriangle,
@@ -21,19 +23,44 @@ import {
   BarChart3,
   ChevronRight,
   TimerOff,
+  Search,
 } from "lucide-react";
-import { apiGetHorasStats } from "./_lib/api";
+import { apiGetHorasStats, apiSearchAllStaff } from "./_lib/api";
 import { formatMinutes } from "./_lib/utils";
 import type { HorasStats } from "./_lib/types";
 
 export default function HorasPage() {
   const { user } = useWord();
+  const router = useRouter();
   const isAdmin = hasRole(user, "ADMIN");
   const isSupervisor = hasRole(user, "SUPERVISOR");
   const canAccess = isAdmin || isSupervisor;
 
   const [stats, setStats] = useState<HorasStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Employee search — carga todos una vez, filtra client-side
+  const [empQuery, setEmpQuery] = useState("");
+  const [empResults, setEmpResults] = useState<{ id: string; label: string }[]>([]);
+  const [allStaff, setAllStaff] = useState<{ id: string; label: string }[]>([]);
+  const [empSearching, setEmpSearching] = useState(false);
+
+  useEffect(() => {
+    if (!canAccess) return;
+    apiSearchAllStaff()
+      .then(setAllStaff)
+      .catch(() => {});
+  }, [canAccess]);
+
+  function handleEmpSearch(q: string) {
+    setEmpQuery(q);
+    if (q.length < 2) { setEmpResults([]); return; }
+    setEmpSearching(true);
+    const lower = q.toLowerCase();
+    const filtered = allStaff.filter((e) => e.label.toLowerCase().includes(lower));
+    setEmpResults(filtered.slice(0, 10));
+    setEmpSearching(false);
+  }
 
   useEffect(() => {
     if (!canAccess) return;
@@ -180,6 +207,56 @@ export default function HorasPage() {
           label="Banco negativo total"
           value={stats ? formatMinutes(stats.totalNegativeMinutes) : "—"}
         />
+      </div>
+
+      {/* Employee search */}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30 rounded-t-xl overflow-hidden">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm font-semibold">Ver asistencia por empleado</p>
+        </div>
+        <div className="p-4">
+          <div className="relative max-w-sm">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Buscar empleado por nombre o DNI..."
+                value={empQuery}
+                onChange={(e) => handleEmpSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {empResults.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border bg-popover shadow-lg max-h-52 overflow-y-auto">
+                {empResults.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 flex items-center gap-3 group"
+                    onClick={() => {
+                      setEmpQuery("");
+                      setEmpResults([]);
+                      const name = e.label.includes(" - ") ? e.label.split(" - ")[0] : e.label;
+                      router.push(`/dashboard/horas/${e.id}?name=${encodeURIComponent(name)}`);
+                    }}
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      {e.label.charAt(0)}
+                    </div>
+                    <span className="flex-1 truncate">{e.label}</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {empSearching && (
+              <p className="text-xs text-muted-foreground mt-1.5 px-1">Buscando...</p>
+            )}
+            {!empSearching && empQuery.length >= 2 && empResults.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1.5 px-1">Sin resultados</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Quick Access */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ import {
   Edit2,
 } from "lucide-react";
 import {
-  apiGetAsistenciaDay,
+  apiGetAsistenciaDayDetail,
   apiAddPunch,
   apiApproveOvertime,
   apiRejectOvertime,
@@ -53,7 +53,7 @@ import {
   needsDocRef,
 } from "../../_lib/utils";
 import type {
-  AttendanceRecord,
+  AttendanceDayDetail,
   DayType,
   OverrideDayInput,
   PatchAsistenciaInput,
@@ -64,12 +64,16 @@ const OVERRIDE_DAY_TYPES: DayType[] = [
   "TRAINING", "SUSPENSION", "COMPENSATORY_REST",
 ];
 
-function formatDateDisplay(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("es-PE", {
+function formatDateDisplay(d: string | null | undefined) {
+  if (!d) return "—";
+  const date = d.includes("T") ? new Date(d) : new Date(d + "T00:00:00");
+  if (isNaN(date.getTime())) return d;
+  return date.toLocaleDateString("es-PE", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "America/Lima",
   });
 }
 
@@ -90,8 +94,12 @@ export default function DayDetailPage() {
 
   const params = useParams<{ employeeId: string; date: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const employeeName = searchParams.get("name") ?? "";
 
-  const [record, setRecord] = useState<AttendanceRecord | null>(null);
+  const [detail, setDetail] = useState<AttendanceDayDetail | null>(null);
+  const record = detail?.record ?? null;
+  const punches = detail?.punches ?? [];
   const [loading, setLoading] = useState(true);
   const [showPunchDialog, setShowPunchDialog] = useState(false);
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
@@ -122,10 +130,10 @@ export default function DayDetailPage() {
     if (!params.employeeId || !params.date) return;
     setLoading(true);
     try {
-      const rec = await apiGetAsistenciaDay(params.employeeId, params.date);
-      setRecord(rec);
-    } catch {
-      toast.error("No se pudo cargar el registro del día");
+      const data = await apiGetAsistenciaDayDetail(params.employeeId, params.date);
+      setDetail(data);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo cargar el registro del día");
     } finally {
       setLoading(false);
     }
@@ -259,10 +267,8 @@ export default function DayDetailPage() {
           <h1 className="text-xl font-semibold leading-none capitalize">
             {params.date ? formatDateDisplay(params.date) : "Detalle del día"}
           </h1>
-          {record && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {record.employee.nombres} {record.employee.apellidos} · DNI {record.employee.dni}
-            </p>
+          {employeeName && (
+            <p className="text-xs text-muted-foreground mt-1">{employeeName}</p>
           )}
         </div>
       </div>
@@ -339,7 +345,7 @@ export default function DayDetailPage() {
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <p className="text-sm font-semibold leading-none">Fichajes</p>
-                <span className="text-xs text-muted-foreground">{record.punches?.length ?? 0}</span>
+                <span className="text-xs text-muted-foreground">{punches.length}</span>
               </div>
               {canWrite && (
                 <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => {
@@ -352,11 +358,11 @@ export default function DayDetailPage() {
                 </Button>
               )}
             </div>
-            {!record.punches || record.punches.length === 0 ? (
+            {punches.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Sin fichajes</p>
             ) : (
               <div className="divide-y">
-                {record.punches.map((p, i) => (
+                {punches.map((p, i) => (
                   <div key={p.id} className="flex items-center gap-4 px-5 py-3">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
                       {i + 1}

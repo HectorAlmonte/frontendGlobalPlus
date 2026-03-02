@@ -240,7 +240,7 @@ export async function apiSearchEmployees(
   const qTrim = q.trim();
   if (qTrim) sp.set("q", qTrim);
 
-  const res = await fetch(full(`/api/staff/search?${sp.toString()}`), {
+  const res = await fetch(full(`/api/staff/search/all?${sp.toString()}`), {
     credentials: "include",
     cache: "no-store",
   });
@@ -248,7 +248,7 @@ export async function apiSearchEmployees(
   if (!res.ok) throw new Error("Error buscando empleados");
   const data = await res.json();
   return (Array.isArray(data) ? data : []).map((x: any) => ({
-    value: String(x.employeeId),
+    value: String(x.id),
     label: String(x.label),
   }));
 }

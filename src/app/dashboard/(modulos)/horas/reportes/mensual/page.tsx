@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,16 +24,25 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Search, Download, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
-import { apiReporteMensual, apiSearchStaff } from "../../_lib/api";
+import { apiReporteMensual, apiSearchAllStaff } from "../../_lib/api";
 import { formatMinutes, downloadReportXlsx } from "../../_lib/utils";
 import type { ReportMonthlyItem, ReporteMensualParams } from "../../_lib/types";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZES = [10, 20, 50, 100];
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
+
+function empName(r: ReportMonthlyItem): string {
+  if ((r as any).employeeName) return (r as any).employeeName;
+  if (r.employee) return `${r.employee.nombres} ${r.employee.apellidos}`;
+  return "—";
+}
+function empDni(r: ReportMonthlyItem): string {
+  return (r as any).employeeDni ?? r.employee?.dni ?? "—";
+}
 
 export default function ReporteMensualPage() {
   const { user } = useWord();
@@ -39,52 +55,53 @@ export default function ReporteMensualPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [selectedEmployeeLabel, setSelectedEmployeeLabel] = useState("");
   const [empResults, setEmpResults] = useState<{ id: string; label: string }[]>([]);
-  const [empLoading, setEmpLoading] = useState(false);
+  const [allStaff, setAllStaff] = useState<{ id: string; label: string }[]>([]);
 
-  const [rows, setRows] = useState<ReportMonthlyItem[]>([]);
-  const [total, setTotal] = useState(0);
+  useEffect(() => {
+    apiSearchAllStaff().then(setAllStaff).catch(() => {});
+  }, []);
+
+  const [allRows, setAllRows] = useState<ReportMonthlyItem[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const search = useCallback(
-    async (p: number = 1) => {
-      setLoading(true);
-      setSearched(true);
-      const params: ReporteMensualParams = { year, month, page: p, limit: PAGE_SIZE };
-      if (selectedEmployeeId) params.employeeId = selectedEmployeeId;
-      try {
-        const res = await apiReporteMensual(params);
-        setRows(res.data);
-        setTotal(res.total);
-        setPage(p);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al generar reporte");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [year, month, selectedEmployeeId]
+  const pageCount = Math.max(1, Math.ceil(allRows.length / pageSize));
+  const pagedRows = useMemo(
+    () => allRows.slice((page - 1) * pageSize, page * pageSize),
+    [allRows, page, pageSize]
   );
+
+  const search = useCallback(async () => {
+    setLoading(true);
+    setSearched(true);
+    setPage(1);
+    const params: ReporteMensualParams = { year, month, page: 1, limit: 9999 };
+    if (selectedEmployeeId) params.employeeId = selectedEmployeeId;
+    try {
+      const res = await apiReporteMensual(params);
+      setAllRows(res.data ?? []);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al generar reporte");
+    } finally {
+      setLoading(false);
+    }
+  }, [year, month, selectedEmployeeId]);
 
   function handleEmpSearch(q: string) {
     setEmployeeSearch(q);
     if (q.length < 2) { setEmpResults([]); return; }
-    setEmpLoading(true);
-    apiSearchStaff(q)
-      .then(setEmpResults)
-      .catch(() => {})
-      .finally(() => setEmpLoading(false));
+    const lower = q.toLowerCase();
+    setEmpResults(allStaff.filter((e) => e.label.toLowerCase().includes(lower)).slice(0, 10));
   }
 
   function handleExport() {
-    if (rows.length === 0) return;
+    if (allRows.length === 0) return;
     downloadReportXlsx(
-      rows.map((r) => ({
-        Empleado: `${r.employee.nombres} ${r.employee.apellidos}`,
-        DNI: r.employee.dni,
+      allRows.map((r) => ({
+        Empleado: empName(r),
+        DNI: empDni(r),
         Año: r.year,
         Mes: r.month,
         "Días trabajados": r.workedDays,
@@ -121,8 +138,8 @@ export default function ReporteMensualPage() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30 rounded-t-xl overflow-hidden">
           <Search className="h-4 w-4 text-muted-foreground" />
           <p className="text-sm font-semibold leading-none">Filtros</p>
         </div>
@@ -154,7 +171,8 @@ export default function ReporteMensualPage() {
             {selectedEmployeeId ? (
               <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 h-10">
                 <span className="flex-1 text-sm truncate">{selectedEmployeeLabel}</span>
-                <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { setSelectedEmployeeId(""); setSelectedEmployeeLabel(""); setEmployeeSearch(""); }}>✕</button>
+                <button type="button" className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => { setSelectedEmployeeId(""); setSelectedEmployeeLabel(""); setEmployeeSearch(""); }}>✕</button>
               </div>
             ) : (
               <div className="relative">
@@ -173,12 +191,11 @@ export default function ReporteMensualPage() {
                     ))}
                   </div>
                 )}
-                {empLoading && <p className="text-xs text-muted-foreground mt-1">Buscando...</p>}
               </div>
             )}
           </div>
           <div className="flex items-end">
-            <Button className="w-full" onClick={() => search(1)}>
+            <Button className="w-full" onClick={search}>
               <Search className="h-4 w-4 mr-1.5" />
               Buscar
             </Button>
@@ -190,17 +207,27 @@ export default function ReporteMensualPage() {
       {searched && (
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30">
-            <span className="text-xs text-muted-foreground">{total} empleado(s)</span>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={rows.length === 0}>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">{allRows.length} empleado(s)</span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                <SelectTrigger className="h-7 w-20 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZES.map((s) => <SelectItem key={s} value={String(s)}>{s} / pág.</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={allRows.length === 0}>
               <Download className="h-3.5 w-3.5 mr-1.5" />
-              Exportar
+              Exportar todo
             </Button>
           </div>
           {loading ? (
             <div className="p-5 space-y-2">
               {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}
             </div>
-          ) : rows.length === 0 ? (
+          ) : allRows.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">Sin resultados</p>
           ) : (
             <>
@@ -219,16 +246,18 @@ export default function ReporteMensualPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((r) => (
+                    {pagedRows.map((r) => (
                       <TableRow key={r.employeeId}>
-                        <TableCell className="font-medium text-sm">{r.employee.nombres} {r.employee.apellidos}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{r.employee.dni}</TableCell>
+                        <TableCell className="font-medium text-sm">{empName(r)}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{empDni(r)}</TableCell>
                         <TableCell className="text-right text-sm">{r.workedDays}</TableCell>
                         <TableCell className="text-right font-mono text-xs">{formatMinutes(r.effectiveMinutes)}</TableCell>
                         <TableCell className={`text-right font-mono text-xs ${r.lateMinutes > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
                           {r.lateMinutes > 0 ? formatMinutes(r.lateMinutes) : "—"}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs">{r.approvedOvertimeMinutes > 0 ? formatMinutes(r.approvedOvertimeMinutes) : "—"}</TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          {r.approvedOvertimeMinutes > 0 ? formatMinutes(r.approvedOvertimeMinutes) : "—"}
+                        </TableCell>
                         <TableCell className={`text-right font-mono text-xs ${r.hourBankBalance < 0 ? "text-red-600 dark:text-red-400" : r.hourBankBalance > 0 ? "text-green-600 dark:text-green-400" : ""}`}>
                           {formatMinutes(r.hourBankBalance)}
                         </TableCell>
@@ -240,9 +269,15 @@ export default function ReporteMensualPage() {
               </div>
               {pageCount > 1 && (
                 <div className="flex items-center justify-between px-5 py-3 border-t">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => search(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-                  <span className="text-xs text-muted-foreground">Página {page} de {pageCount}</span>
-                  <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => search(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Página {page} de {pageCount} · {allRows.length} empleados
+                  </span>
+                  <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
             </>

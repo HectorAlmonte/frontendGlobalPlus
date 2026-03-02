@@ -111,12 +111,13 @@ export interface AttendanceRecord {
   isNightShift: boolean;
   documentRef: string | null;
   overrideNotes: string | null;
-  employee: {
+  employeeId?: string;
+  employee?: {
     id: string;
     nombres: string;
     apellidos: string;
     dni: string;
-  };
+  } | null;
   punches?: AttendancePunch[];
   createdAt: string;
   updatedAt: string;
@@ -127,6 +128,35 @@ export interface AttendanceListResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface AttendanceDayDetail {
+  record: {
+    id: string;
+    date: string;
+    dayType: DayType;
+    status: AttendanceRecordStatus;
+    scheduledMinutes: number;
+    rawMinutes: number;
+    effectiveMinutes: number;
+    lateMinutes: number;
+    overtimeRawMinutes: number;
+    overtimeEffectiveMinutes: number;
+    overtimeMultiplier: number;
+    overtimeStatus: OvertimeStatus;
+    isHoliday: boolean;
+    isNightShift: boolean;
+    documentRef: string | null;
+    overrideNotes: string | null;
+    schedule: { id: string; name: string; effectiveFrom?: string } | null;
+  } | null;
+  punches: {
+    id: string;
+    punchedAt: string;
+    source: string;
+    notes: string | null;
+    createdBy: { id: string; username: string } | null;
+  }[];
 }
 
 export interface OvertimePendingItem {
@@ -230,7 +260,8 @@ export interface VacationTxResponse {
 // ─── Reportes ────────────────────────────────────────────────────────────────
 
 export interface ReportDetailItem {
-  recordId: string;
+  employeeName: string;
+  employeeDni: string;
   date: string;
   dayType: DayType;
   status: AttendanceRecordStatus;
@@ -238,12 +269,11 @@ export interface ReportDetailItem {
   effectiveMinutes: number;
   lateMinutes: number;
   overtimeEffectiveMinutes: number;
-  employee: {
-    id: string;
-    nombres: string;
-    apellidos: string;
-    dni: string;
-  };
+  dayMultiplier: number;
+  overtimeStatus: string;
+  isHoliday: boolean;
+  paidByEssalud: boolean;
+  documentRef: string | null;
 }
 
 export interface ReportDetailResponse {

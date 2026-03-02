@@ -104,6 +104,7 @@ const ALERTS = [
 ]
 
 export function NotificationsMenu() {
+  const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const [stats, setStats] = useState<NotifStats>({
     openIncidents: 0,
@@ -128,6 +129,7 @@ export function NotificationsMenu() {
   }, [])
 
   useEffect(() => {
+    setMounted(true)
     load()
     const interval = setInterval(() => load(), 60_000)
     return () => clearInterval(interval)
@@ -135,6 +137,14 @@ export function NotificationsMenu() {
 
   const active = ALERTS.filter((a) => stats[a.key] > 0)
   const total = active.reduce((sum, a) => sum + stats[a.key], 0)
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="relative h-8 w-8">
+        <Bell className="h-4 w-4" />
+      </Button>
+    )
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

@@ -97,6 +97,7 @@ export default function ProductDialog({ open, onOpenChange, product, onSuccess }
       if (isEdit) {
         const update: ProductUpdateInput = {
           name: form.name.trim(),
+          code: form.code.trim().toUpperCase().replace(/\s+/g, "_"),
           categoryId: form.categoryId,
           description: form.description.trim() || undefined,
           unit: form.kind === "CONSUMABLE" ? form.unit : undefined,
@@ -169,7 +170,6 @@ export default function ProductDialog({ open, onOpenChange, product, onSuccess }
               value={form.code}
               onChange={(e) => set("code", e.target.value.toUpperCase())}
               placeholder="Ej. GUANTE_NITRILO"
-              disabled={isEdit}
               className={isEdit ? "opacity-60" : ""}
             />
             {!isEdit && (

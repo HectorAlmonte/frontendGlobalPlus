@@ -4,6 +4,7 @@ import type {
   BiometricMapping,
   UnmappedEmployee,
   AttendanceRecord,
+  AttendanceDayDetail,
   AttendanceListResponse,
   OvertimePendingItem,
   MonthlyAttendanceSummary,
@@ -147,6 +148,9 @@ export const apiGetAsistencia = (
 export const apiGetAsistenciaDay = (employeeId: string, date: string) =>
   apiFetch<AttendanceRecord>(full(`/api/asistencia/${employeeId}/${date}`));
 
+export const apiGetAsistenciaDayDetail = (employeeId: string, date: string) =>
+  apiFetch<AttendanceDayDetail>(full(`/api/asistencia/${employeeId}/${date}`));
+
 export const apiAddPunch = (body: AddPunchInput) =>
   apiFetch<AttendanceRecord>(full("/api/asistencia/punch"), {
     method: "POST",
@@ -189,7 +193,7 @@ export const apiRecalcWeek = (employeeId: string, date: string) =>
   );
 
 export const apiGetOvertimePending = () =>
-  apiFetch<OvertimePendingItem[]>(full("/api/asistencia/overtime/pending"));
+  apiFetch<OvertimePendingItem[]>(full("/api/asistencia/overtime/pendientes"));
 
 export const apiApproveOvertime = (
   employeeId: string,
@@ -361,7 +365,12 @@ export interface StaffSearchItem {
   label: string;
 }
 
+/** Busca solo TRABAJADOR — usar para incidencias/EPP */
 export const apiSearchStaff = (q = "") =>
   apiFetch<StaffSearchItem[]>(
     full(`/api/staff/search${q ? `?q=${encodeURIComponent(q)}` : ""}`)
   );
+
+/** Devuelve TODOS los empleados (todos los roles) — usar para búsquedas de horas */
+export const apiSearchAllStaff = () =>
+  apiFetch<StaffSearchItem[]>(full("/api/staff/search/all"));
