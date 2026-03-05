@@ -1,43 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, ListChecks, ShieldAlert } from "lucide-react";
+import { BarChart3, ListChecks, ShieldAlert, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import IncidentsTable from "./_components/IncidentsTable";
-import IncidentDetailSheet from "./_components/IncidentDetailSheet";
-import CorrectiveModal from "./_components/CorrectiveModal";
-import CloseIncidentModal from "./_components/CloseIncidentModal";
-import CreateIncidentDialog from "./_components/CreateIncidentDialog";
 import IncidentKpiDashboard from "./_components/IncidentKpiDashboard";
-import EditIncidentDialog from "./_components/EditIncidentDialog";
-import EditCorrectiveDialog from "./_components/EditCorrectiveDialog";
-import EditClosureDialog from "./_components/EditClosureDialog";
 import SubtasksReportView from "./_components/SubtasksReportView";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { useModuleShortcuts } from "@/hooks/useModuleShortcuts";
 
 import type {
-  CreateIncidentInput,
-  IncidentDetail,
   IncidentListItem,
   IncidentStatus,
   IncidentPeriod,
 } from "./_lib/types";
 
-import {
-  apiCreateIncident,
-  apiGetIncidentDetail,
-  apiListIncidents,
-  apiCloseIncidentForm,
-  apiDeleteIncident,
-  API_BASE,
-} from "./_lib/api";
+import { apiListIncidents, API_BASE } from "./_lib/api";
 
-/** ===== Tipos minimos para perfil ===== */
 type RoleKey = "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD" | string;
 
 type MeProfile = {
@@ -45,11 +29,37 @@ type MeProfile = {
     id: string;
     username: string;
     role?: { key: RoleKey; name?: string | null } | null;
-    email?: string | null;
   };
-  employee?: any;
-  incidents?: any[];
+  employee?: {
+    shift?: { startTime: string; endTime: string } | null;
+  } | null;
 };
+
+function getCurrentLocalTime() {
+  const now = new Date();
+  return { hour: now.getHours(), minute: now.getMinutes() };
+}
+
+function timeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function canCreateIncident(
+  roleKey?: RoleKey,
+  profile?: MeProfile | null
+): boolean {
+  if (!roleKey) return false;
+  if (roleKey === "ADMIN" || roleKey === "SUPERVISOR" || roleKey === "SEGURIDAD") return true;
+  if (roleKey === "TRABAJADOR") {
+    const shift = profile?.employee?.shift;
+    if (!shift?.startTime || !shift?.endTime) return false;
+    const { hour, minute } = getCurrentLocalTime();
+    const current = hour * 60 + minute;
+    return current >= timeToMinutes(shift.startTime) && current <= timeToMinutes(shift.endTime);
+  }
+  return false;
+}
 
 const PERIOD_OPTIONS: { value: IncidentPeriod; label: string }[] = [
   { value: "7d", label: "7D" },
@@ -60,35 +70,20 @@ const PERIOD_OPTIONS: { value: IncidentPeriod; label: string }[] = [
 ];
 
 export default function IncidentsPage() {
+  const router = useRouter();
+
   const [items, setItems] = useState<IncidentListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const [openSheet, setOpenSheet] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<IncidentDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [profile, setProfile] = useState<MeProfile | null>(null);
+  const roleKey: RoleKey | undefined = profile?.user?.role?.key;
 
-  const [openCreate, setOpenCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
+  useModuleShortcuts({ onNew: () => router.push("/dashboard/incidents/new") });
 
-  useModuleShortcuts({ onNew: () => setOpenCreate(true) });
-
-  const [correctiveOpen, setCorrectiveOpen] = useState(false);
-  const [correctiveIncidentId, setCorrectiveIncidentId] = useState<string | null>(null);
-  const [closeOpen, setCloseOpen] = useState(false);
-  const [closeIncidentId, setCloseIncidentId] = useState<string | null>(null);
-  const [closing, setClosing] = useState(false);
-
-  // Edit dialogs
-  const [editIncidentOpen, setEditIncidentOpen] = useState(false);
-  const [editCorrectiveOpen, setEditCorrectiveOpen] = useState(false);
-  const [editClosureOpen, setEditClosureOpen] = useState(false);
-
-  // Analytics period (independent from table)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<IncidentPeriod>("all");
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
-  // Table filters — q and status are persisted; dates are session-only
   type TableFilters = {
     q: string;
     status: IncidentStatus | "ALL";
@@ -117,7 +112,7 @@ export default function IncidentsPage() {
     []
   );
 
-  // Leer filtro de status desde URL (?status=OPEN|IN_PROGRESS|CLOSED) al montar
+  // Leer filtro de status desde URL al montar
   const didReadUrlFilter = useRef(false);
   useEffect(() => {
     if (didReadUrlFilter.current) return;
@@ -130,55 +125,29 @@ export default function IncidentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Analytics toggle
-  const [showAnalytics, setShowAnalytics] = useState(false);
-
-  // =========================
-  // PERFIL (para saber roleKey)
-  // =========================
-  const [profile, setProfile] = useState<MeProfile | null>(null);
-  const roleKey: RoleKey | undefined = profile?.user?.role?.key;
-
   const fetchMyProfile = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/users/me/profile`, {
-        credentials: "include",
-      });
+      const res = await fetch(`${API_BASE}/api/users/me/profile`, { credentials: "include" });
       if (!res.ok) return;
-      const data = (await res.json()) as MeProfile;
-      setProfile(data);
+      setProfile(await res.json());
     } catch {
       // silencioso
     }
-  }, [API_BASE]);
+  }, []);
 
-  useEffect(() => {
-    fetchMyProfile();
-  }, [fetchMyProfile]);
+  useEffect(() => { fetchMyProfile(); }, [fetchMyProfile]);
 
-  // =========================
-  // METRICS FETCHER (for KPI dashboard)
-  // =========================
   const fetchMetrics = useCallback(
     async ({ range }: { range: string }) => {
-      const res = await fetch(
-        `${API_BASE}/api/incidents/metrics?range=${range}`,
-        { credentials: "include" }
-      );
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(
-          `No se pudieron cargar las metricas (${res.status}): ${txt}`
-        );
-      }
+      const res = await fetch(`${API_BASE}/api/incidents/metrics?range=${range}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`No se pudieron cargar las métricas (${res.status})`);
       return res.json();
     },
-    [API_BASE]
+    []
   );
 
-  // =========================
-  // DATA LOADERS
-  // =========================
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -196,35 +165,8 @@ export default function IncidentsPage() {
     }
   }, [filterDateFrom, filterDateTo]);
 
-  const fetchDetail = useCallback(async (id: string) => {
-    setDetailLoading(true);
-    try {
-      const data = await apiGetIncidentDetail(id);
-      setDetail(data);
-    } catch (e) {
-      console.error("Error al ver detalle:", e);
-      setDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
+  useEffect(() => { fetchList(); }, [fetchList]);
 
-  const reloadDetail = useCallback(async () => {
-    if (!selectedId) return;
-    await fetchDetail(selectedId);
-  }, [selectedId, fetchDetail]);
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
-
-  useEffect(() => {
-    if (selectedId) fetchDetail(selectedId);
-  }, [selectedId, fetchDetail]);
-
-  // =========================
-  // FILTROS (client-side)
-  // =========================
   const filtered = useMemo(() => {
     let out = items;
 
@@ -244,87 +186,19 @@ export default function IncidentsPage() {
       );
     }
 
-    // Client-side date fallback
     if (tableFilters.dateFrom) {
       const from = tableFilters.dateFrom.getTime();
       out = out.filter((x) => new Date(x.reportedAt).getTime() >= from);
     }
     if (tableFilters.dateTo) {
-      const to = tableFilters.dateTo.getTime() + 86400000; // end of day
+      const to = tableFilters.dateTo.getTime() + 86400000;
       out = out.filter((x) => new Date(x.reportedAt).getTime() < to);
     }
 
     return out;
   }, [items, tableFilters]);
 
-  // =========================
-  // HANDLERS
-  // =========================
-  async function handleCreate(input: CreateIncidentInput) {
-    setCreating(true);
-    try {
-      await apiCreateIncident(input);
-      setOpenCreate(false);
-      await fetchList();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  const handleCloseSubmit = useCallback(
-    async ({ detail: closeDetail, files }: { detail: string; files: File[] }) => {
-      if (!closeIncidentId) return;
-      setClosing(true);
-      try {
-        await apiCloseIncidentForm(closeIncidentId, {
-          detail: closeDetail,
-          files,
-        });
-        setCloseOpen(false);
-        await fetchList();
-        if (selectedId === closeIncidentId) await fetchDetail(closeIncidentId);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setClosing(false);
-      }
-    },
-    [closeIncidentId, selectedId, fetchDetail, fetchList]
-  );
-
-  const handleEditIncident = useCallback(() => {
-    if (detail) setEditIncidentOpen(true);
-  }, [detail]);
-
-  const handleEditCorrective = useCallback(() => {
-    if (detail) setEditCorrectiveOpen(true);
-  }, [detail]);
-
-  const handleEditClosure = useCallback(() => {
-    if (detail) setEditClosureOpen(true);
-  }, [detail]);
-
-  const handleDeleteIncident = useCallback(
-    async (id: string) => {
-      try {
-        await apiDeleteIncident(id);
-        setOpenSheet(false);
-        setSelectedId(null);
-        setDetail(null);
-        await fetchList();
-      } catch (e) {
-        console.error("Error al eliminar incidencia:", e);
-      }
-    },
-    [fetchList]
-  );
-
-  const handleEditSaved = useCallback(async () => {
-    await reloadDetail();
-    await fetchList();
-  }, [reloadDetail, fetchList]);
+  const allowed = canCreateIncident(roleKey, profile);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-5 space-y-6">
@@ -350,17 +224,32 @@ export default function IncidentsPage() {
             className="gap-2"
           >
             <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">{showAnalytics ? "Ocultar analytics" : "Analytics"}</span>
+            <span className="hidden sm:inline">
+              {showAnalytics ? "Ocultar analytics" : "Analytics"}
+            </span>
           </Button>
 
-          <CreateIncidentDialog
-            open={openCreate}
-            onOpenChange={setOpenCreate}
-            creating={creating}
-            onCreate={handleCreate}
-            roleKey={roleKey}
-            profile={profile}
-          />
+          {allowed ? (
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => router.push("/dashboard/incidents/new")}
+            >
+              <Plus className="h-4 w-4" />
+              Nueva incidencia
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled
+              className="gap-2"
+              title="Sin permiso para registrar incidencias ahora"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Nueva incidencia
+            </Button>
+          )}
         </div>
       </div>
 
@@ -388,10 +277,7 @@ export default function IncidentsPage() {
             </div>
           </div>
 
-          <IncidentKpiDashboard
-            period={analyticsPeriod}
-            fetchMetrics={fetchMetrics}
-          />
+          <IncidentKpiDashboard period={analyticsPeriod} fetchMetrics={fetchMetrics} />
         </div>
       )}
 
@@ -412,115 +298,17 @@ export default function IncidentsPage() {
             items={filtered}
             filters={tableFilters}
             onFiltersChange={setTableFilters}
-            onOpen={(id) => {
-              setSelectedId(id);
-              setOpenSheet(true);
-            }}
+            onOpen={(id) => router.push(`/dashboard/incidents/${id}`)}
             onRefresh={fetchList}
           />
         </TabsContent>
 
         <TabsContent value="objetivos">
           <SubtasksReportView
-            onOpenIncident={(id) => {
-              setSelectedId(id);
-              setOpenSheet(true);
-            }}
+            onOpenIncident={(id) => router.push(`/dashboard/incidents/${id}`)}
           />
         </TabsContent>
       </Tabs>
-
-      {/* ===== PANEL DETALLE ===== */}
-      <IncidentDetailSheet
-        open={openSheet}
-        onOpenChange={setOpenSheet}
-        selectedId={selectedId}
-        detailLoading={detailLoading}
-        detail={detail}
-        onReload={reloadDetail}
-        onOpenCorrective={(id) => {
-          setCorrectiveIncidentId(id);
-          setCorrectiveOpen(true);
-        }}
-        onCloseIncident={(id) => {
-          setCloseIncidentId(id);
-          setCloseOpen(true);
-        }}
-        closing={closing}
-        onEditIncident={handleEditIncident}
-        onEditCorrective={handleEditCorrective}
-        onEditClosure={handleEditClosure}
-        onDeleteIncident={handleDeleteIncident}
-      />
-
-      <CorrectiveModal
-        open={correctiveOpen}
-        onOpenChange={setCorrectiveOpen}
-        incidentId={correctiveIncidentId}
-        onSaved={async () => {
-          await reloadDetail();
-          await fetchList();
-        }}
-        profile={profile}
-        roleKey={roleKey}
-      />
-
-      <CloseIncidentModal
-        open={closeOpen}
-        onOpenChange={setCloseOpen}
-        incidentId={closeIncidentId}
-        incidentFolio={
-          detail?.number != null
-            ? `#${String(detail.number).padStart(3, "0")}`
-            : null
-        }
-        loading={closing}
-        onSubmit={handleCloseSubmit}
-        profile={profile}
-        roleKey={roleKey}
-      />
-
-      <EditIncidentDialog
-        open={editIncidentOpen}
-        onOpenChange={setEditIncidentOpen}
-        detail={detail}
-        onSaved={handleEditSaved}
-      />
-
-      <EditCorrectiveDialog
-        open={editCorrectiveOpen}
-        onOpenChange={setEditCorrectiveOpen}
-        incidentId={detail?.id ?? null}
-        corrective={
-          detail
-            ? {
-                priority: (detail as any).corrective?.priority ?? "MEDIA",
-                dueDate:
-                  (detail as any).correctiveDueAt ??
-                  (detail as any).corrective?.dueDate ??
-                  null,
-                detail:
-                  (detail as any).correctiveAction ??
-                  (detail as any).corrective?.detail ??
-                  "",
-                responsible: (detail as any).corrective?.responsible ?? [],
-              }
-            : null
-        }
-        onSaved={handleEditSaved}
-      />
-
-      <EditClosureDialog
-        open={editClosureOpen}
-        onOpenChange={setEditClosureOpen}
-        incidentId={detail?.id ?? null}
-        closureDetail={
-          (detail as any)?.closureDetail ??
-          (detail as any)?.closure?.detail ??
-          ""
-        }
-        onSaved={handleEditSaved}
-      />
     </div>
   );
 }
