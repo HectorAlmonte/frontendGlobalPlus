@@ -101,10 +101,15 @@ async function apiCreateCorrective(incidentId: string, payload: any) {
   return res.json();
 }
 
-async function apiSearchStaff(q: string): Promise<{ value: string; label: string }[]> {
-  const url = new URL(`${API_BASE}/api/staff/search`);
-  if (q.trim()) url.searchParams.set("q", q.trim());
-  const res = await fetch(url.toString(), { credentials: "include" });
+async function apiSearchStaff(q: string, allStaff: { value: string; label: string }[]): Promise<{ value: string; label: string }[]> {
+  const qTrim = q.trim().toLowerCase();
+  if (!qTrim) return [];
+  return allStaff.filter((s) => s.label.toLowerCase().includes(qTrim));
+}
+
+async function apiLoadAllStaff(): Promise<{ value: string; label: string }[]> {
+  const url = `${API_BASE}/api/staff/search/all`;
+  const res = await fetch(url, { credentials: "include" });
   if (!res.ok) return [];
   const data = await res.json();
   return (Array.isArray(data) ? data : []).map((x: any) => ({
@@ -235,16 +240,25 @@ export default function CorrectiveModal({
   const [staffSearch, setStaffSearch] = React.useState("");
   const [staffResults, setStaffResults] = React.useState<{ value: string; label: string }[]>([]);
   const [staffLoading, setStaffLoading] = React.useState(false);
+  const allStaffRef = React.useRef<{ value: string; label: string }[]>([]);
+  const allStaffLoadedRef = React.useRef(false);
   const staffDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cargar todo el staff una sola vez al abrir
+  React.useEffect(() => {
+    if (!open || allStaffLoadedRef.current) return;
+    allStaffLoadedRef.current = true;
+    apiLoadAllStaff().then((data) => { allStaffRef.current = data; });
+  }, [open]);
 
   React.useEffect(() => {
     if (staffDebounceRef.current) clearTimeout(staffDebounceRef.current);
     if (!staffSearch.trim()) { setStaffResults([]); return; }
     staffDebounceRef.current = setTimeout(async () => {
       setStaffLoading(true);
-      try { setStaffResults(await apiSearchStaff(staffSearch)); }
+      try { setStaffResults(await apiSearchStaff(staffSearch, allStaffRef.current)); }
       finally { setStaffLoading(false); }
-    }, 300);
+    }, 200);
   }, [staffSearch]);
 
   function addResponsible(opt: { value: string; label: string }) {
