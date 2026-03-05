@@ -8,8 +8,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Clock,
-  PenLine,
-  Package,
+  ClipboardCheck,
   ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,29 +23,25 @@ const API = process.env.NEXT_PUBLIC_API_URL
 
 type NotifStats = {
   openIncidents: number
-  criticalStock: number
-  lowStock: number
   overdueTasks: number
-  unsignedEpp: number
+  pendingChecklistSignatures: number
 }
 
 async function loadStats(): Promise<NotifStats> {
   try {
-    const res = await fetch(`${API}/api/dashboard/stats`, {
-      credentials: "include",
-      cache: "no-store",
-    })
-    if (!res.ok) return { openIncidents: 0, criticalStock: 0, lowStock: 0, overdueTasks: 0, unsignedEpp: 0 }
-    const data = await res.json()
+    const [dashRes, checklistRes] = await Promise.all([
+      fetch(`${API}/api/dashboard/stats`, { credentials: "include", cache: "no-store" }),
+      fetch(`${API}/api/checklist/stats`, { credentials: "include", cache: "no-store" }),
+    ])
+    const dash = dashRes.ok ? await dashRes.json() : null
+    const checklist = checklistRes.ok ? await checklistRes.json() : null
     return {
-      openIncidents: data?.incidents?.open ?? 0,
-      criticalStock: data?.storage?.criticalStock ?? 0,
-      lowStock:      data?.storage?.lowStock ?? 0,
-      overdueTasks:  data?.tasks?.overdue ?? 0,
-      unsignedEpp:   data?.epp?.unsigned ?? 0,
+      openIncidents:              dash?.incidents?.open ?? 0,
+      overdueTasks:               dash?.tasks?.overdue ?? 0,
+      pendingChecklistSignatures: checklist?.pendingSignatures ?? 0,
     }
   } catch {
-    return { openIncidents: 0, criticalStock: 0, lowStock: 0, overdueTasks: 0, unsignedEpp: 0 }
+    return { openIncidents: 0, overdueTasks: 0, pendingChecklistSignatures: 0 }
   }
 }
 
@@ -62,26 +57,6 @@ const ALERTS = [
     iconBg: "bg-destructive/10 dark:bg-destructive/20",
   },
   {
-    key: "criticalStock" as keyof NotifStats,
-    label: (n: number) => (n === 1 ? "producto en stock crítico" : "productos en stock crítico"),
-    sublabel: "Almacén · Nivel crítico",
-    href: "/dashboard/storage/products",
-    Icon: Package,
-    color: "text-destructive",
-    bg: "bg-destructive/8 dark:bg-destructive/15",
-    iconBg: "bg-destructive/10 dark:bg-destructive/20",
-  },
-  {
-    key: "lowStock" as keyof NotifStats,
-    label: (n: number) => (n === 1 ? "producto con stock bajo" : "productos con stock bajo"),
-    sublabel: "Almacén · Reponer pronto",
-    href: "/dashboard/storage/products",
-    Icon: Package,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    iconBg: "bg-amber-100 dark:bg-amber-900/30",
-  },
-  {
     key: "overdueTasks" as keyof NotifStats,
     label: (n: number) => (n === 1 ? "tarea vencida" : "tareas vencidas"),
     sublabel: "Requiere atención",
@@ -92,11 +67,11 @@ const ALERTS = [
     iconBg: "bg-amber-100 dark:bg-amber-900/30",
   },
   {
-    key: "unsignedEpp" as keyof NotifStats,
-    label: (n: number) => (n === 1 ? "EPP sin firma" : "EPP sin firmar"),
-    sublabel: "Firma digital pendiente",
-    href: "/dashboard/epp",
-    Icon: PenLine,
+    key: "pendingChecklistSignatures" as keyof NotifStats,
+    label: (n: number) => (n === 1 ? "checklist pendiente de firma" : "checklists pendientes de firma"),
+    sublabel: "Checklist · Firma requerida",
+    href: "/dashboard/checklist",
+    Icon: ClipboardCheck,
     color: "text-blue-600 dark:text-blue-400",
     bg: "bg-blue-50 dark:bg-blue-950/20",
     iconBg: "bg-blue-100 dark:bg-blue-900/30",
@@ -108,10 +83,8 @@ export function NotificationsMenu() {
   const [open, setOpen] = useState(false)
   const [stats, setStats] = useState<NotifStats>({
     openIncidents: 0,
-    criticalStock: 0,
-    lowStock: 0,
     overdueTasks: 0,
-    unsignedEpp: 0,
+    pendingChecklistSignatures: 0,
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)

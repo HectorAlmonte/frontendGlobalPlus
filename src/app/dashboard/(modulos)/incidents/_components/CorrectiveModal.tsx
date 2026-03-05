@@ -28,7 +28,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X, Users, Search } from "lucide-react";
 
 type IncidentPriority = "BAJA" | "MEDIA" | "ALTA";
 type RoleKey = "ADMIN" | "SUPERVISOR" | "TRABAJADOR" | "SEGURIDAD" | string;
@@ -99,6 +99,18 @@ async function apiCreateCorrective(incidentId: string, payload: any) {
   }
 
   return res.json();
+}
+
+async function apiSearchStaff(q: string): Promise<{ value: string; label: string }[]> {
+  const url = new URL(`${API_BASE}/api/staff/search`);
+  if (q.trim()) url.searchParams.set("q", q.trim());
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (Array.isArray(data) ? data : []).map((x: any) => ({
+    value: String(x.id),
+    label: String(x.label),
+  }));
 }
 
 async function apiUploadIncidentFiles(
@@ -218,6 +230,34 @@ export default function CorrectiveModal({
   const [err, setErr] = React.useState<string | null>(null);
   const [evidenceFiles, setEvidenceFiles] = React.useState<File[]>([]);
 
+  // Responsables
+  const [responsibles, setResponsibles] = React.useState<{ value: string; label: string }[]>([]);
+  const [staffSearch, setStaffSearch] = React.useState("");
+  const [staffResults, setStaffResults] = React.useState<{ value: string; label: string }[]>([]);
+  const [staffLoading, setStaffLoading] = React.useState(false);
+  const staffDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (staffDebounceRef.current) clearTimeout(staffDebounceRef.current);
+    if (!staffSearch.trim()) { setStaffResults([]); return; }
+    staffDebounceRef.current = setTimeout(async () => {
+      setStaffLoading(true);
+      try { setStaffResults(await apiSearchStaff(staffSearch)); }
+      finally { setStaffLoading(false); }
+    }, 300);
+  }, [staffSearch]);
+
+  function addResponsible(opt: { value: string; label: string }) {
+    if (responsibles.some((r) => r.value === opt.value)) return;
+    setResponsibles((prev) => [...prev, opt]);
+    setStaffSearch("");
+    setStaffResults([]);
+  }
+
+  function removeResponsible(id: string) {
+    setResponsibles((prev) => prev.filter((r) => r.value !== id));
+  }
+
   // ✅ Validación de permisos
   const validation = React.useMemo(
     () => canPerformAction(roleKey, profile),
@@ -247,6 +287,9 @@ export default function CorrectiveModal({
       setErr(null);
       setSaving(false);
       setEvidenceFiles([]);
+      setResponsibles([]);
+      setStaffSearch("");
+      setStaffResults([]);
       form.reset({ priority: "MEDIA", dueDate: "", detail: "" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -271,6 +314,7 @@ export default function CorrectiveModal({
         priority: values.priority as IncidentPriority,
         dueDate: dateInputToIsoUtc(values.dueDate || "") ?? null,
         detail: values.detail,
+        responsibleIds: responsibles.map((r) => r.value),
       });
 
       if (evidenceFiles.length) {
@@ -391,6 +435,72 @@ export default function CorrectiveModal({
               <p className="text-xs text-destructive">
                 {form.formState.errors.detail.message}
               </p>
+            )}
+          </div>
+
+          {/* ── Responsables ── */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" />
+              Responsables (opcional)
+            </Label>
+
+            {/* chips de seleccionados */}
+            {responsibles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {responsibles.map((r) => (
+                  <span
+                    key={r.value}
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"
+                  >
+                    {r.label}
+                    <button
+                      type="button"
+                      onClick={() => removeResponsible(r.value)}
+                      className="ml-0.5 text-muted-foreground hover:text-foreground"
+                      disabled={saving}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* buscador */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Buscar empleado por nombre o DNI..."
+                value={staffSearch}
+                onChange={(e) => setStaffSearch(e.target.value)}
+                disabled={saving || !allowed}
+                className="pl-8 h-9 text-sm"
+              />
+            </div>
+
+            {/* resultados */}
+            {(staffResults.length > 0 || staffLoading) && (
+              <div className="rounded-lg border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
+                {staffLoading && (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">Buscando...</p>
+                )}
+                {staffResults.map((opt) => {
+                  const already = responsibles.some((r) => r.value === opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={already || saving}
+                      onClick={() => addResponsible(opt)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {opt.label}
+                      {already && <span className="ml-2 text-xs text-muted-foreground">(ya añadido)</span>}
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
 

@@ -503,6 +503,7 @@ export default function IncidentsPage() {
                   (detail as any).correctiveAction ??
                   (detail as any).corrective?.detail ??
                   "",
+                responsible: (detail as any).corrective?.responsible ?? [],
               }
             : null
         }

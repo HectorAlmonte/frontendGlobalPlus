@@ -35,6 +35,14 @@ type DashboardStats = {
   storage:   { criticalStock: number; lowStock: number }
 }
 
+type ChecklistStats = {
+  total: number
+  completed: number
+  critical: number
+  pendingSignatures: number
+  completionRate: number
+}
+
 type RecentIncident = {
   id: string
   number?: number
@@ -56,6 +64,13 @@ async function fetchStats(): Promise<IncidentStats | null> {
 async function fetchDashboardStats(): Promise<DashboardStats | null> {
   try {
     const r = await fetch(`${API}/api/dashboard/stats`, { credentials: "include", cache: "no-store" })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
+async function fetchChecklistStats(): Promise<ChecklistStats | null> {
+  try {
+    const r = await fetch(`${API}/api/checklist/stats`, { credentials: "include", cache: "no-store" })
     return r.ok ? r.json() : null
   } catch { return null }
 }
@@ -111,16 +126,18 @@ export default function DashboardPage() {
   const { setWord, user } = useWord()
   const [stats, setStats] = useState<IncidentStats | null>(null)
   const [dashStats, setDashStats] = useState<DashboardStats | null>(null)
+  const [checklistStats, setChecklistStats] = useState<ChecklistStats | null>(null)
   const [recent, setRecent] = useState<RecentIncident[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { setWord("Dashboard") }, [setWord])
 
   useEffect(() => {
-    Promise.all([fetchStats(), fetchDashboardStats(), fetchRecent()])
-      .then(([s, dash, r]) => {
+    Promise.all([fetchStats(), fetchDashboardStats(), fetchChecklistStats(), fetchRecent()])
+      .then(([s, dash, cl, r]) => {
         setStats(s)
         setDashStats(dash)
+        setChecklistStats(cl)
         setRecent(r)
       })
       .finally(() => setLoading(false))
@@ -216,7 +233,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Módulos ── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 
         {/* EPP */}
         <Link href="/dashboard/epp" className="group rounded-xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all">
@@ -239,12 +256,12 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Últimos 30 días</span>
+                  <span className="text-muted-foreground">Últimos 30d</span>
                   <span className="font-semibold tabular-nums">{dashStats.epp.last30Days}</span>
                 </div>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">Sin datos disponibles</p>
+              <p className="text-xs text-muted-foreground">Sin datos</p>
             )}
           </div>
         </Link>
@@ -264,7 +281,7 @@ export default function DashboardPage() {
             ) : dashStats?.storage ? (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Stock crítico (sin stock)</span>
+                  <span className="text-muted-foreground">Crítico</span>
                   <span className={`font-semibold tabular-nums ${dashStats.storage.criticalStock > 0 ? "text-red-500" : "text-emerald-500"}`}>
                     {dashStats.storage.criticalStock}
                   </span>
@@ -277,7 +294,7 @@ export default function DashboardPage() {
                 </div>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">Sin datos disponibles</p>
+              <p className="text-xs text-muted-foreground">Sin datos</p>
             )}
           </div>
         </Link>
@@ -312,7 +329,44 @@ export default function DashboardPage() {
                 </div>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">Sin datos disponibles</p>
+              <p className="text-xs text-muted-foreground">Sin datos</p>
+            )}
+          </div>
+        </Link>
+
+        {/* Checklist */}
+        <Link href="/dashboard/checklist" className="group rounded-xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <ClipboardList className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">Checklist</p>
+            <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {loading ? (
+              <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
+            ) : checklistStats ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Firmas pend.</span>
+                  <span className={`font-semibold tabular-nums ${checklistStats.pendingSignatures > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                    {checklistStats.pendingSignatures}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Issues críticos</span>
+                  <span className={`font-semibold tabular-nums ${checklistStats.critical > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                    {checklistStats.critical}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Completado</span>
+                  <span className="font-semibold tabular-nums">{checklistStats.completionRate.toFixed(0)}%</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin datos</p>
             )}
           </div>
         </Link>

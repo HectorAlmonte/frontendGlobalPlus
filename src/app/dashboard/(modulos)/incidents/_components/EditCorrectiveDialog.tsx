@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Dialog,
@@ -26,8 +26,25 @@ import {
 } from "@/components/ui/select";
 
 import { apiPatchCorrective } from "../_lib/api";
+import { X, Users, Search } from "lucide-react";
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
+
+async function apiSearchStaff(q: string): Promise<{ value: string; label: string }[]> {
+  const url = new URL(`${API_BASE}/api/staff/search`);
+  if (q.trim()) url.searchParams.set("q", q.trim());
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (Array.isArray(data) ? data : []).map((x: any) => ({
+    value: String(x.id),
+    label: String(x.label),
+  }));
+}
 
 type Priority = "BAJA" | "MEDIA" | "ALTA";
+
+type ResponsibleOption = { value: string; label: string };
 
 type Props = {
   open: boolean;
@@ -37,6 +54,7 @@ type Props = {
     priority: Priority;
     dueDate?: string | null;
     detail: string;
+    responsible?: { id: string; nombres: string; apellidos: string }[];
   } | null;
   onSaved: () => void;
 };
@@ -74,12 +92,48 @@ export default function EditCorrectiveDialog({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Responsables
+  const [responsibles, setResponsibles] = useState<ResponsibleOption[]>([]);
+  const [staffSearch, setStaffSearch] = useState("");
+  const [staffResults, setStaffResults] = useState<ResponsibleOption[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const staffDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (staffDebounceRef.current) clearTimeout(staffDebounceRef.current);
+    if (!staffSearch.trim()) { setStaffResults([]); return; }
+    staffDebounceRef.current = setTimeout(async () => {
+      setStaffLoading(true);
+      try { setStaffResults(await apiSearchStaff(staffSearch)); }
+      finally { setStaffLoading(false); }
+    }, 300);
+  }, [staffSearch]);
+
+  function addResponsible(opt: ResponsibleOption) {
+    if (responsibles.some((r) => r.value === opt.value)) return;
+    setResponsibles((prev) => [...prev, opt]);
+    setStaffSearch("");
+    setStaffResults([]);
+  }
+
+  function removeResponsible(id: string) {
+    setResponsibles((prev) => prev.filter((r) => r.value !== id));
+  }
+
   useEffect(() => {
     if (open && corrective) {
       setPriority(corrective.priority);
       setDueDate(toDateInput(corrective.dueDate));
       setDetail(corrective.detail ?? "");
       setErr(null);
+      setResponsibles(
+        (corrective.responsible ?? []).map((r) => ({
+          value: r.id,
+          label: `${r.nombres} ${r.apellidos}`.trim(),
+        }))
+      );
+      setStaffSearch("");
+      setStaffResults([]);
     }
   }, [open, corrective]);
 
@@ -102,6 +156,7 @@ export default function EditCorrectiveDialog({
         priority,
         dueDate: dateInputToIsoUtc(dueDate) ?? null,
         detail: detail.trim(),
+        responsibleIds: responsibles.map((r) => r.value),
       });
       onSaved();
       onOpenChange(false);
@@ -155,6 +210,59 @@ export default function EditCorrectiveDialog({
               onChange={(e) => setDueDate(e.target.value)}
               disabled={saving}
             />
+          </div>
+
+          {/* ── Responsables ── */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" />
+              Responsables (opcional)
+            </Label>
+
+            {responsibles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {responsibles.map((r) => (
+                  <span key={r.value} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                    {r.label}
+                    <button type="button" onClick={() => removeResponsible(r.value)} disabled={saving} className="ml-0.5 text-muted-foreground hover:text-foreground">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Buscar empleado por nombre o DNI..."
+                value={staffSearch}
+                onChange={(e) => setStaffSearch(e.target.value)}
+                disabled={saving}
+                className="pl-8 h-9 text-sm"
+              />
+            </div>
+
+            {(staffResults.length > 0 || staffLoading) && (
+              <div className="rounded-lg border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
+                {staffLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Buscando...</p>}
+                {staffResults.map((opt) => {
+                  const already = responsibles.some((r) => r.value === opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={already || saving}
+                      onClick={() => addResponsible(opt)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {opt.label}
+                      {already && <span className="ml-2 text-xs text-muted-foreground">(ya añadido)</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <Separator />

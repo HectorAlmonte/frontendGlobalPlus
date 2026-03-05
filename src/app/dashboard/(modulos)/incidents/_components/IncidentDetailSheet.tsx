@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { IncidentDetail } from "../_lib/types";
 import { normalizeCauses, statusBadge } from "../_lib/utils";
-import { apiDeleteIncidentFile } from "../_lib/api";
+import { apiDeleteIncidentFile, apiUploadIncidentFiles } from "../_lib/api";
 
 import { useWord } from "@/context/AppContext";
 import { hasRole } from "@/lib/utils";
@@ -31,6 +31,8 @@ import {
   Wrench,
   CheckCircle2,
   Loader2,
+  Upload,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import SubtaskSection from "./SubtaskSection";
@@ -208,7 +210,8 @@ export default function IncidentDetailSheet({
     const hasCorrective =
       d.status === "IN_PROGRESS" || !!corr || !!correctiveAction || !!correctiveDueAt || !!correctiveSetAt || !!correctiveSetBy;
     const priority = corr?.priority ?? null;
-    return { hasCorrective, correctiveAction, correctiveDueAt, correctiveSetAt, correctiveByLabel, priority };
+    const responsible: { id: string; nombres: string; apellidos: string }[] = corr?.responsible ?? [];
+    return { hasCorrective, correctiveAction, correctiveDueAt, correctiveSetAt, correctiveByLabel, priority, responsible };
   }, [detail]);
 
   const closure = React.useMemo(() => {
@@ -230,6 +233,40 @@ export default function IncidentDetailSheet({
   }, [detail]);
 
   const [printing, setPrinting] = React.useState(false);
+
+  const [uploadingReport, setUploadingReport] = React.useState(false);
+  const [uploadingCorrective, setUploadingCorrective] = React.useState(false);
+  const [uploadingClosure, setUploadingClosure] = React.useState(false);
+
+  const fileInputReportRef = React.useRef<HTMLInputElement>(null);
+  const fileInputCorrectiveRef = React.useRef<HTMLInputElement>(null);
+  const fileInputClosureRef = React.useRef<HTMLInputElement>(null);
+
+  function makeUploadHandler(
+    stage: "REPORT" | "CORRECTIVE" | "CLOSURE",
+    setUploading: (v: boolean) => void,
+    ref: React.RefObject<HTMLInputElement | null>
+  ) {
+    return async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length || !(detail as any)?.id) return;
+      setUploading(true);
+      try {
+        await apiUploadIncidentFiles((detail as any).id, files, stage);
+        toast.success(`${files.length} archivo(s) subido(s)`);
+        onReload();
+      } catch (err: any) {
+        toast.error(err?.message || "Error subiendo archivos");
+      } finally {
+        setUploading(false);
+        if (ref.current) ref.current.value = "";
+      }
+    };
+  }
+
+  const handleUploadReport = makeUploadHandler("REPORT", setUploadingReport, fileInputReportRef);
+  const handleUploadCorrective = makeUploadHandler("CORRECTIVE", setUploadingCorrective, fileInputCorrectiveRef);
+  const handleUploadClosure = makeUploadHandler("CLOSURE", setUploadingClosure, fileInputClosureRef);
 
   const handlePrint = React.useCallback(async () => {
     if (!detail) return;
@@ -468,9 +505,27 @@ export default function IncidentDetailSheet({
                       </div>
                       <p className="text-sm font-semibold leading-none">Evidencias</p>
                     </div>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
-                      {filesAll.length > 0 ? `${filesAll.length} archivo${filesAll.length !== 1 ? "s" : ""}` : "Sin archivos"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+                        {filesAll.length > 0 ? `${filesAll.length} archivo${filesAll.length !== 1 ? "s" : ""}` : "Sin archivos"}
+                      </span>
+                      {isSupervisor && (
+                        <>
+                          <input ref={fileInputReportRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={handleUploadReport} />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 text-xs"
+                            disabled={uploadingReport}
+                            onClick={() => fileInputReportRef.current?.click()}
+                          >
+                            {uploadingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                            {uploadingReport ? "Subiendo..." : "Agregar"}
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="p-5">
                     {filesAll.length === 0 ? (
@@ -552,11 +607,29 @@ export default function IncidentDetailSheet({
                           )}
                         </div>
                       </div>
-                      {isSupervisor && !isClosed && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar correctivo" onClick={() => onEditCorrective?.((detail as any).id)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {isSupervisor && (
+                          <>
+                            <input ref={fileInputCorrectiveRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={handleUploadCorrective} />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 text-xs"
+                              disabled={uploadingCorrective}
+                              onClick={() => fileInputCorrectiveRef.current?.click()}
+                            >
+                              {uploadingCorrective ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                              {uploadingCorrective ? "Subiendo..." : "Agregar"}
+                            </Button>
+                          </>
+                        )}
+                        {isSupervisor && !isClosed && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar correctivo" onClick={() => onEditCorrective?.((detail as any).id)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
                       <Field label="Fecha tentativa">
@@ -568,6 +641,20 @@ export default function IncidentDetailSheet({
                       <Field label="Registrado por">
                         <p className="font-medium">{corrective.correctiveByLabel}</p>
                       </Field>
+                      {corrective.responsible.length > 0 && (
+                        <div className="sm:col-span-2">
+                          <Field label="Responsables">
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {corrective.responsible.map((r) => (
+                                <span key={r.id} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                                  <Users className="h-3 w-3 text-muted-foreground" />
+                                  {`${r.nombres} ${r.apellidos}`.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </Field>
+                        </div>
+                      )}
                       <div className="sm:col-span-2">
                         <Field label="Acción correctiva">
                           <p className="text-sm whitespace-pre-wrap mt-1">
@@ -589,11 +676,29 @@ export default function IncidentDetailSheet({
                         </div>
                         <p className="text-sm font-semibold leading-none">Cierre de Incidencia</p>
                       </div>
-                      {isSupervisor && isClosed && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar cierre" onClick={() => onEditClosure?.((detail as any).id)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {isSupervisor && (
+                          <>
+                            <input ref={fileInputClosureRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={handleUploadClosure} />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 text-xs"
+                              disabled={uploadingClosure}
+                              onClick={() => fileInputClosureRef.current?.click()}
+                            >
+                              {uploadingClosure ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                              {uploadingClosure ? "Subiendo..." : "Agregar"}
+                            </Button>
+                          </>
+                        )}
+                        {isSupervisor && isClosed && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar cierre" onClick={() => onEditClosure?.((detail as any).id)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
                       <Field label="Fecha de cierre">

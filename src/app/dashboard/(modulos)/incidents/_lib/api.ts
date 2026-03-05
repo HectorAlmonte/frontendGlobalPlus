@@ -233,6 +233,27 @@ export async function apiDeleteIncident(id: string) {
   return res.json();
 }
 
+export async function apiUploadIncidentFiles(
+  incidentId: string,
+  files: File[],
+  stage: "REPORT" | "CORRECTIVE" | "CLOSURE" = "REPORT"
+) {
+  if (!files.length) return;
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+  const res = await fetch(`${API_BASE}/api/incidents/${incidentId}/files?stage=${stage}`, {
+    method: "POST",
+    credentials: "include",
+    body: fd,
+  });
+  if (!res.ok) {
+    let msg = "Error subiendo evidencias";
+    try { const j = await res.json(); msg = j?.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export async function apiDeleteIncidentFile(fileId: string) {
   const res = await fetch(`${API_BASE}/api/incidents/files/${fileId}`, {
     method: "DELETE",

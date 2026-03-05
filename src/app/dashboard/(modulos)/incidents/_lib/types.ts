@@ -158,6 +158,12 @@ export type IncidentDetail = IncidentListItem & {
     priority: "BAJA" | "MEDIA" | "ALTA";
     dueDate: string | null;
 
+    responsible?: {
+      id: string;
+      nombres: string;
+      apellidos: string;
+    }[];
+
     createdBy?: {
       id: string;
       username: string;
